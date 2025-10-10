@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roomzin Cluster Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f8961e;
+            --danger: #f72585;
+            --info: #7209b7;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 10px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            --gradient-success: linear-gradient(135deg, #4cc9f0 0%, #4895ef 100%);
+            --gradient-warning: linear-gradient(135deg, #f8961e 0%, #f3722c 100%);
+            --gradient-danger: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fb 0%, #f0f2f5 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 15px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header - More Compact */
+        header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            /* box-shadow: var(--box-shadow); */
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            box-shadow: 0 3px 10px rgba(67, 97, 238, 0.2);
+        }
+
+        .logo-text h1 {
+            color: var(--dark);
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .logo-text p {
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
+
+        .cluster-status {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-healthy {
+            background: rgba(76, 201, 240, 0.15);
+            color: #0a9396;
+            border: 1px solid rgba(76, 201, 240, 0.3);
+        }
+
+        .badge-refresh {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(67, 97, 238, 0.2);
+        }
+
+        .badge-nodes {
+            background: rgba(114, 9, 183, 0.1);
+            color: var(--info);
+            border: 1px solid rgba(114, 9, 183, 0.2);
+        }
+
+        .last-updated {
+            color: var(--gray);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .last-updated i {
+            color: var(--primary);
+        }
+
+        .header-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        /* Main Dashboard Layout - More Compact */
+        .dashboard-content {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Nodes Panel - Compact */
+        .nodes-panel {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 650px;
+        }
+
+        .panel-header {
+            padding: 15px 20px;
+            color: #414cdc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .panel-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header h2 i {
+            font-size: 1rem;
+        }
+
+        .nodes-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .nodes-container::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .nodes-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .nodes-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        /* Node Card - Compact */
+        .node-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .node-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1), 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .node-card.leader::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--gradient-success);
+        }
+
+        .node-card.follower::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--gradient-warning);
+        }
+
+        .node-card.unavailable {
+            opacity: 0.6;
+            filter: grayscale(0.5);
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .node-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .node-name i {
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .node-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .status-active_leader {
+            background: rgba(76, 201, 240, 0.15);
+            color: #0a9396;
+            border: 1px solid rgba(76, 201, 240, 0.3);
+        }
+
+        .status-active_follower {
+            background: rgba(248, 150, 30, 0.15);
+            color: #ca6702;
+            border: 1px solid rgba(248, 150, 30, 0.3);
+        }
+
+        .status-unavailable {
+            background: rgba(247, 37, 133, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(247, 37, 133, 0.3);
+        }
+
+        .node-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .node-detail {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+        }
+
+        .detail-label {
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Metrics Panel - Compact */
+        .metrics-panel {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metrics-header {
+            padding: 15px 20px;
+            color: #414cdc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 0;
+        }
+
+        .selected-node-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            display: none;
+        }
+
+        .selected-node-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .selected-node-name i {
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .refresh-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .refresh-indicator i {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Metrics Grid - More Compact Layout */
+        .metrics-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 1400px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Metrics Section - Compact */
+        .metrics-section {
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            padding-top: 5px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            padding-bottom: 0px;
+        }
+
+        .section-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .icon-tcp {
+            color: #414cdc;
+        }
+
+        .icon-cluster {
+            color: #f47929;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        /* Metrics Cards - Compact Grid */
+        .metrics-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .metric-title {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.9rem;
+            line-height: 1.3;
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .metric-subvalues {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+        }
+
+        .metric-subvalue {
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(67, 97, 238, 0.06);
+            color: var(--primary);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .metric-subvalue.danger {
+            background: rgba(247, 37, 133, 0.08);
+            color: var(--danger);
+        }
+
+        .metric-subvalue.success {
+            background: rgba(76, 201, 240, 0.08);
+            color: #0a9396;
+        }
+
+        .metric-description {
+            font-size: 0.75rem;
+            color: var(--gray);
+            line-height: 1.4;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(0, 0, 0, 0.05);
+        }
+
+        /* Error and Loading States */
+        .error-state {
+            padding: 30px 15px;
+            text-align: center;
+            color: var(--gray);
+        }
+
+        .error-state i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--light-gray);
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 15px;
+            color: var(--gray);
+        }
+
+        .loading-spinner {
+            border: 2px solid rgba(67, 97, 238, 0.1);
+            border-radius: 50%;
+            border-top: 2px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        /* Utility Classes */
+        .d-none {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-danger {
+            color: var(--danger) !important;
+        }
+
+        .text-success {
+            color: #0a9396 !important;
+        }
+
+        .mb-2 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Roomzin Cluster</h1>
+                    <p>Real-time distributed system monitoring</p>
+                </div>
+            </div>
+
+            <div class="cluster-status">
+                <div class="status-badges">
+                    <div class="status-badge badge-healthy">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Cluster Healthy</span>
+                    </div>
+                    <div class="status-badge badge-refresh">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Auto-refresh: <span id="refresh-status">Active</span></span>
+                    </div>
+                    <div class="status-badge badge-nodes">
+                        <i class="fas fa-database"></i>
+                        <span>Nodes: <span id="node-count">0</span> active</span>
+                    </div>
+                </div>
+                <div class="last-updated">
+                    <i class="fas fa-clock"></i>
+                    <span>Last updated: <span id="last-updated">Never</span></span>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="refresh-nodes">
+                        <i class="fas fa-redo"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="btn btn-outline" id="toggle-auto-refresh">
+                        <i class="fas fa-pause"></i>
+                        <span>Pause</span>
+                    </button>
+                </div>
+                <div class="last-updated">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Live demo mode</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Nodes Panel -->
+            <div class="nodes-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-network-wired"></i> Cluster Nodes</h2>
+                </div>
+                <div class="nodes-container" id="nodes-container">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading cluster nodes...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Panel -->
+            <div class="metrics-panel">
+                <div class="metrics-header">
+                    <div class="selected-node-info">
+                        <div class="selected-node-name">
+                            <i class="fas fa-server"></i>
+                            <span id="selected-node-name">Select a node to view metrics</span>
+                        </div>
+                        <div class="refresh-indicator">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Metrics refresh: 1s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <!-- Cluster Metrics Section -->
+                    <div class="metrics-section">
+                        <div class="section-header">
+                            <div class="section-icon icon-cluster">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Cluster Metrics</h3>
+                            </div>
+                        </div>
+                        <div class="metrics-cards" id="cluster-metrics">
+                            <!-- Cluster Connections -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Cluster Connections</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue success">Opened</div>
+                                    <div class="metric-subvalue success">Accepted</div>
+                                    <div class="metric-subvalue danger" style="display: none;">Rejected</div>
+                                    <div class="metric-subvalue danger">Errors</div>
+                                    <div class="metric-subvalue danger">Dropped</div>
+                                </div>
+                                <div class="metric-description">Inter-node connections</div>
+                            </div>
+
+                            <!-- Messages -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Messages I/O</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue success">Sent</div>
+                                    <div class="metric-subvalue success">Received</div>
+                                    <div class="metric-subvalue danger">Send Errors</div>
+                                    <div class="metric-subvalue danger">Recv Errors</div>
+                                </div>
+                                <div class="metric-description">Message flow statistics</div>
+                            </div>
+
+                            <!-- Data Transfer -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Data I/O</div>
+                                </div>
+                                <div class="metric-value">0 B</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue success">Sent</div>
+                                    <div class="metric-subvalue success">Received</div>
+                                </div>
+                                <div class="metric-description">Inter-node data transfer</div>
+                            </div>
+
+                            <!-- Leadership Changes -->
+                            <div class="metric-card" style="display: none !important;">
+                                <div class="metric-header">
+                                    <div class="metric-title">Elections</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-description">Leader election count</div>
+                            </div>
+
+                            <!-- Snapshot Operations -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Snapshots</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue success">Produced</div>
+                                    <div class="metric-subvalue danger">Failed</div>
+                                    <div class="metric-subvalue">Transferred</div>
+                                </div>
+                                <div class="metric-description">Snapshot operations</div>
+                            </div>
+
+                            <!-- Snapshot Performance -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Snapshot Perf</div>
+                                </div>
+                                <div class="metric-value">0ms</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue">Save</div>
+                                    <div class="metric-subvalue">Load</div>
+                                    <div class="metric-subvalue">Transfer</div>
+                                    <div class="metric-subvalue">Write Pause</div>
+                                </div>
+                                <div class="metric-description">Operation durations</div>
+                            </div>
+
+                            <!-- WAL Operations -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">WAL Ops</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue success">Flushes</div>
+                                    <div class="metric-subvalue">Last Index</div>
+                                </div>
+                                <div class="metric-description">Write-Ahead Log operations</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- TCP Metrics Section -->
+                    <div class="metrics-section">
+                        <div class="section-header">
+                            <div class="section-icon icon-tcp">
+                                <i class="fas fa-plug"></i>
+                            </div>
+                            <div>
+                                <h3 class="section-title">TCP Metrics</h3>
+                            </div>
+                        </div>
+                        <div class="metrics-cards" id="tcp-metrics">
+                            <!-- Active Connections -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Active Connections</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-description">Current TCP connections</div>
+                            </div>
+
+                            <!-- Total Commands -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Total Commands</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-description">Commands processed</div>
+                            </div>
+
+                            <!-- Data Transfer -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Data I/O</div>
+                                </div>
+                                <div class="metric-value">0 B</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue">Sent: 0 B</div>
+                                    <div class="metric-subvalue">Received: 0 B</div>
+                                </div>
+                                <div class="metric-description">Bytes sent/received</div>
+                            </div>
+
+                            <!-- Client Issues -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Client Issues</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue danger">Errors</div>
+                                    <div class="metric-subvalue danger">Timeouts</div>
+                                    <div class="metric-subvalue danger">Login Fails</div>
+                                    <div class="metric-subvalue danger" style="display: none;">Disconnects</div>
+                                </div>
+                                <div class="metric-description">Client-related issues</div>
+                            </div>
+
+                            <!-- Connection Issues -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Connection Issues</div>
+                                </div>
+                                <div class="metric-value">0</div>
+                                <div class="metric-subvalues">
+                                    <div class="metric-subvalue danger">Rejected Conn</div>
+                                    <div class="metric-subvalue danger">Rejected Req</div>
+                                </div>
+                                <div class="metric-description">Rejections statistics</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            hosts: [
+                'http://localhost:7880',
+                'http://localhost:7980',
+                'http://localhost:8080'
+            ],
+            authToken: 'abc123',
+            nodeRefreshInterval: 30000,
+            metricsRefreshInterval: 1000,
+            metricsEndpoint: '/metrics',
+            nodeInfoEndpoint: '/node-info',
+            healthEndpoint: '/healthz',
+            peersEndpoint: '/peers'
+        };
+
+        // Application state
+        const state = {
+            nodes: [],
+            selectedNode: null,
+            lastUpdated: null,
+            nodePollingInterval: null,
+            metricsPollingInterval: null,
+            autoRefresh: true,
+            demoMode: true
+        };
+
+        // DOM Elements
+        const nodesContainer = document.getElementById('nodes-container');
+        const selectedNodeNameEl = document.getElementById('selected-node-name');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const nodeCountEl = document.getElementById('node-count');
+        const refreshStatusEl = document.getElementById('refresh-status');
+        const tcpMetricsContainer = document.getElementById('tcp-metrics');
+        const clusterMetricsContainer = document.getElementById('cluster-metrics');
+        const refreshNodesBtn = document.getElementById('refresh-nodes');
+        const toggleAutoRefreshBtn = document.getElementById('toggle-auto-refresh');
+
+        // Helper functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function formatDuration(ms) {
+            if (ms < 1000) return ms + 'ms';
+            if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+            return (ms / 60000).toFixed(1) + 'm';
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            state.lastUpdated = now;
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastUpdatedEl.textContent = timeStr;
+        }
+
+        // Fetch data from a URL with authorization header
+        async function fetchWithAuth(url, endpoint, responseType = 'json') {
+            try {
+                const response = await fetch(`${url}${endpoint}`, {
+                    headers: {
+                        'Authorization': `Bearer ${CONFIG.authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                if (responseType === 'text') {
+                    return await response.text();
+                } else if (responseType === 'json') {
+                    return await response.json();
+                }
+
+                return await response.text();
+            } catch (error) {
+                console.error(`Error fetching ${url}${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        // Parse Prometheus metrics text into an object
+        function parsePrometheusMetrics(metricsText) {
+            const metrics = {};
+            if (!metricsText) return metrics;
+
+            const lines = metricsText.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('#') || line.trim() === '') continue;
+
+                const match = line.match(/^(\w+)(?:\{([^}]+)\})?\s+([\d\.eE+-]+)$/);
+                if (match) {
+                    const [, name, , value] = match;
+                    metrics[name] = parseFloat(value);
+                }
+            }
+
+            return metrics;
+        }
+
+        // Fetch node information and health
+        async function fetchNodeInfo(host) {
+            try {
+                const [healthData, nodeInfoData, peersData] = await Promise.all([
+                    fetchWithAuth(host, CONFIG.healthEndpoint, 'text'),
+                    fetchWithAuth(host, CONFIG.nodeInfoEndpoint, 'json'),
+                    fetchWithAuth(host, CONFIG.peersEndpoint, 'json')
+                ]);
+
+                let status = 'unavailable';
+                if (healthData) {
+                    status = healthData.trim();
+                }
+
+                let nodeId = host.split('//')[1].split(':')[0];
+                let leaderId = null;
+                let shardId = null;
+                let zoneId = null;
+                let peers = [];
+
+                if (nodeInfoData) {
+                    nodeId = nodeInfoData.node_id || nodeId;
+                    leaderId = nodeInfoData.leader_id || null;
+                    shardId = nodeInfoData.shard_id || null;
+                    zoneId = nodeInfoData.zone_id || null;
+                }
+
+                if (peersData && Array.isArray(peersData)) {
+                    peers = peersData;
+                }
+
+                return {
+                    host,
+                    nodeId,
+                    leaderId,
+                    shardId,
+                    zoneId,
+                    status,
+                    peers,
+                    metrics: null,
+                    lastMetricsUpdate: null
+                };
+            } catch (error) {
+                console.error(`Error fetching node info for ${host}:`, error);
+                return {
+                    host,
+                    nodeId: host.split('//')[1].split(':')[0],
+                    leaderId: null,
+                    shardId: null,
+                    zoneId: null,
+                    status: 'unavailable',
+                    peers: [],
+                    metrics: null,
+                    lastMetricsUpdate: null
+                };
+            }
+        }
+
+        // Fetch metrics for a specific node
+        async function fetchNodeMetrics(node) {
+            try {
+                const metricsText = await fetchWithAuth(node.host, CONFIG.metricsEndpoint, 'text');
+                if (metricsText) {
+                    node.metrics = parsePrometheusMetrics(metricsText);
+                    node.lastMetricsUpdate = new Date();
+                }
+                return node;
+            } catch (error) {
+                console.error(`Error fetching metrics for ${node.host}:`, error);
+                return node;
+            }
+        }
+
+        // Render a node card
+        function renderNodeCard(node) {
+            const isLeader = node.status === 'active_leader';
+            const isFollower = node.status === 'active_follower';
+            const isUnavailable = node.status === 'unavailable';
+            const isSelected = state.selectedNode && state.selectedNode.host === node.host;
+
+            const statusClass = isUnavailable ? 'unavailable' :
+                isLeader ? 'leader' :
+                    isFollower ? 'follower' : '';
+
+            const cardClass = `node-card ${statusClass} ${isSelected ? 'active' : ''}`;
+
+            return `
+                <div class="${cardClass}" data-host="${node.host}">
+                    <div class="node-header">
+                        <div class="node-name">
+                            <i class="fas fa-server"></i>
+                            ${node.nodeId}
+                        </div>
+                        <div class="node-status status-${node.status}">${node.status.replace('_', ' ')}</div>
+                    </div>
+                    <div class="node-details">
+                        <div class="node-detail">
+                            <span class="detail-label">Host:</span>
+                            <span class="detail-value">${node.host.replace('http://', '').split(':')[0]}</span>
+                        </div>
+                        <div class="node-detail">
+                            <span class="detail-label">Shard:</span>
+                            <span class="detail-value">${node.shardId || 'N/A'}</span>
+                        </div>
+                        <div class="node-detail">
+                            <span class="detail-label">Zone:</span>
+                            <span class="detail-value">${node.zoneId || 'N/A'}</span>
+                        </div>
+                        <div class="node-detail">
+                            <span class="detail-label">Peers:</span>
+                            <span class="detail-value">${node.peers.length}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update the nodes display
+        function updateNodesDisplay() {
+            if (state.nodes.length === 0) {
+                nodesContainer.innerHTML = '<div class="error-state"><i class="fas fa-exclamation-circle"></i><p>No nodes available</p></div>';
+                return;
+            }
+
+            // Count active nodes
+            const activeNodes = state.nodes.filter(n => n.status !== 'unavailable').length;
+            nodeCountEl.textContent = activeNodes;
+
+            nodesContainer.innerHTML = state.nodes.map(renderNodeCard).join('');
+
+            // Update selected node styling
+            if (state.selectedNode) {
+                document.querySelectorAll('.node-card').forEach(card => {
+                    card.classList.remove('active');
+                    if (card.getAttribute('data-host') === state.selectedNode.host) {
+                        card.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // Select a node to view its metrics
+        async function selectNode(host) {
+            const node = state.nodes.find(n => n.host === host);
+            if (!node) return;
+
+            state.selectedNode = node;
+
+            // Update UI
+            selectedNodeNameEl.textContent = node.nodeId;
+            updateNodesDisplay();
+
+            // Fetch and display metrics immediately
+            await fetchAndDisplayMetrics(node);
+
+            // Start metrics auto-refresh for this node
+            startMetricsAutoRefresh();
+        }
+
+        // Fetch and display metrics for a node
+        async function fetchAndDisplayMetrics(node) {
+            await fetchNodeMetrics(node);
+            updateMetricsDisplay(node);
+            updateTimestamp();
+        }
+
+        // Update metrics display for selected node
+        function updateMetricsDisplay(node) {
+            if (!node || !node.metrics) {
+                resetMetricsDisplay();
+                return;
+            }
+
+            const metrics = node.metrics;
+
+            // Update TCP metrics
+            updateTCPMetrics(metrics);
+
+            // Update Cluster metrics
+            updateClusterMetrics(metrics);
+        }
+
+        // Reset metrics display
+        function resetMetricsDisplay() {
+            // TCP Metrics
+            const tcpCards = tcpMetricsContainer.querySelectorAll('.metric-card');
+
+            // Active Connections
+            tcpCards[0].querySelector('.metric-value').textContent = '0';
+
+            // Total Commands
+            tcpCards[1].querySelector('.metric-value').textContent = '0';
+
+            // Data Transfer
+            tcpCards[2].querySelector('.metric-value').textContent = '0 B';
+            const tcpSubvalues2 = tcpCards[2].querySelectorAll('.metric-subvalue');
+            tcpSubvalues2[0].textContent = 'Sent';
+            tcpSubvalues2[1].textContent = 'Received';
+
+            // Client Issues
+            tcpCards[3].querySelector('.metric-value').textContent = '0';
+            const tcpSubvalues3 = tcpCards[3].querySelectorAll('.metric-subvalue');
+            tcpSubvalues3[0].textContent = 'Errors';
+            tcpSubvalues3[1].textContent = 'Timeouts';
+            tcpSubvalues3[2].textContent = 'Login Fails';
+            tcpSubvalues3[3].textContent = 'Disconnects';
+
+            // Connection Issues
+            tcpCards[4].querySelector('.metric-value').textContent = '0';
+            const tcpSubvalues4 = tcpCards[4].querySelectorAll('.metric-subvalue');
+            tcpSubvalues4[0].textContent = 'Rejected Conn';
+            tcpSubvalues4[1].textContent = 'Rejected Req';
+
+            // Cluster Metrics
+            const clusterCards = clusterMetricsContainer.querySelectorAll('.metric-card');
+
+            // Cluster Connections
+            clusterCards[0].querySelector('.metric-value').textContent = '0';
+            const clusterSubvalues0 = clusterCards[0].querySelectorAll('.metric-subvalue');
+            clusterSubvalues0[0].textContent = 'Opened';
+            clusterSubvalues0[1].textContent = 'Accepted';
+            clusterSubvalues0[2].textContent = 'Rejected';
+            clusterSubvalues0[3].textContent = 'Errors';
+            clusterSubvalues0[4].textContent = 'Dropped';
+
+            // Messages
+            clusterCards[1].querySelector('.metric-value').textContent = '0';
+            const clusterSubvalues1 = clusterCards[1].querySelectorAll('.metric-subvalue');
+            clusterSubvalues1[0].textContent = 'Sent';
+            clusterSubvalues1[1].textContent = 'Received';
+            clusterSubvalues1[2].textContent = 'Send Errors';
+            clusterSubvalues1[3].textContent = 'Recv Errors';
+
+            // Data Transfer
+            clusterCards[2].querySelector('.metric-value').textContent = '0 B';
+            const clusterSubvalues2 = clusterCards[2].querySelectorAll('.metric-subvalue');
+            clusterSubvalues2[0].textContent = 'Sent';
+            clusterSubvalues2[1].textContent = 'Received';
+
+            // Leadership Changes
+            clusterCards[3].querySelector('.metric-value').textContent = '0';
+
+            // Snapshot Operations
+            clusterCards[4].querySelector('.metric-value').textContent = '0';
+            const clusterSubvalues4 = clusterCards[4].querySelectorAll('.metric-subvalue');
+            clusterSubvalues4[0].textContent = 'Produced';
+            clusterSubvalues4[1].textContent = 'Failed';
+            clusterSubvalues4[2].textContent = 'Transferred';
+
+            // Snapshot Performance
+            clusterCards[5].querySelector('.metric-value').textContent = '0ms';
+            const clusterSubvalues5 = clusterCards[5].querySelectorAll('.metric-subvalue');
+            clusterSubvalues5[0].textContent = 'Save';
+            clusterSubvalues5[1].textContent = 'Load';
+            clusterSubvalues5[2].textContent = 'Transfer';
+            clusterSubvalues5[3].textContent = 'Write Pause';
+
+            // WAL Operations
+            clusterCards[6].querySelector('.metric-value').textContent = '0';
+            const clusterSubvalues6 = clusterCards[6].querySelectorAll('.metric-subvalue');
+            clusterSubvalues6[0].textContent = 'Flushes';
+            clusterSubvalues6[1].textContent = 'Last Index';
+        }
+
+        // Update TCP metrics display
+        function updateTCPMetrics(metrics) {
+            const tcpCards = tcpMetricsContainer.querySelectorAll('.metric-card');
+
+            // Active connections
+            const connections = metrics.tcp_connections || 0;
+            tcpCards[0].querySelector('.metric-value').textContent = formatNumber(connections);
+
+            // Total commands
+            const commands = metrics.tcp_commands_total || 0;
+            tcpCards[1].querySelector('.metric-value').textContent = formatNumber(commands);
+
+            // Data transfer
+            const bytesReceived = metrics.tcp_bytes_received_total || 0;
+            const bytesSent = metrics.tcp_bytes_sent_total || 0;
+            tcpCards[2].querySelector('.metric-value').textContent = formatBytes(bytesReceived + bytesSent);
+            const tcpSubvalues2 = tcpCards[2].querySelectorAll('.metric-subvalue');
+            tcpSubvalues2[0].textContent = `Sent: ${formatBytes(bytesSent)}`;
+            tcpSubvalues2[1].textContent = `Received: ${formatBytes(bytesReceived)}`;
+
+            // Client Issues
+            const errors = metrics.tcp_errors_total || 0;
+            const timeouts = metrics.tcp_timeouts_total || 0;
+            const clientErrors = metrics.tcp_client_errors_total || 0;
+            const loginFails = metrics.tcp_client_login_fail_total || 0;
+            const disconnects = metrics.tcp_client_disconnects_total || 0;
+
+            const totalClientIssues = errors + timeouts + clientErrors + loginFails; // + disconnects;
+            tcpCards[3].querySelector('.metric-value').textContent = formatNumber(totalClientIssues);
+            const tcpSubvalues3 = tcpCards[3].querySelectorAll('.metric-subvalue');
+            tcpSubvalues3[0].textContent = `Errors: ${formatNumber(errors)}`;
+            tcpSubvalues3[1].textContent = `Timeouts: ${formatNumber(timeouts)}`;
+            tcpSubvalues3[2].textContent = `Login Fails: ${formatNumber(loginFails)}`;
+            tcpSubvalues3[3].textContent = `Disconnects: ${formatNumber(disconnects)}`;
+
+            // Connection Issues
+            const rejectedConnections = metrics.tcp_rejected_connections_total || 0;
+            const rejectedRequests = metrics.tcp_rejected_request_total || 0;
+            const totalConnectionIssues = rejectedConnections + rejectedRequests;
+
+            tcpCards[4].querySelector('.metric-value').textContent = formatNumber(totalConnectionIssues);
+            const tcpSubvalues4 = tcpCards[4].querySelectorAll('.metric-subvalue');
+            tcpSubvalues4[0].textContent = `Rej Conn: ${formatNumber(rejectedConnections)}`;
+            tcpSubvalues4[1].textContent = `Rej Req: ${formatNumber(rejectedRequests)}`;
+        }
+
+        // Update Cluster metrics display
+        function updateClusterMetrics(metrics) {
+            const clusterCards = clusterMetricsContainer.querySelectorAll('.metric-card');
+
+            // Cluster Connections
+            const opened = metrics.cluster_connection_opened_total || 0;
+            const accepted = metrics.cluster_connection_accepted_total || 0;
+            const rejected = metrics.cluster_connection_rejected_total || 0;
+            const errors = metrics.cluster_connection_error_total || 0;
+            const dropped = metrics.cluster_connection_dropped_total || 0;
+            const activeConnections = opened; //+ accepted;
+
+            clusterCards[0].querySelector('.metric-value').textContent = formatNumber(activeConnections);
+            const clusterSubvalues0 = clusterCards[0].querySelectorAll('.metric-subvalue');
+            clusterSubvalues0[0].textContent = `Opened: ${formatNumber(opened)}`;
+            clusterSubvalues0[1].textContent = `Accepted: ${formatNumber(accepted)}`;
+            clusterSubvalues0[2].textContent = `Rejected: ${formatNumber(rejected)}`;
+            clusterSubvalues0[3].textContent = `Errors: ${formatNumber(errors)}`;
+            clusterSubvalues0[4].textContent = `Dropped: ${formatNumber(dropped)}`;
+
+            // Messages
+            const sent = metrics.cluster_message_sent_total || 0;
+            const received = metrics.cluster_message_received_total || 0;
+            const sendErrors = metrics.cluster_send_error_total || 0;
+            const recvErrors = metrics.cluster_receive_error_total || 0;
+            const totalMessages = sent + received;
+
+            clusterCards[1].querySelector('.metric-value').textContent = formatNumber(totalMessages);
+            const clusterSubvalues1 = clusterCards[1].querySelectorAll('.metric-subvalue');
+            clusterSubvalues1[0].textContent = `Sent: ${formatNumber(sent)}`;
+            clusterSubvalues1[1].textContent = `Received: ${formatNumber(received)}`;
+            clusterSubvalues1[2].textContent = `Snd Err: ${formatNumber(sendErrors)}`;
+            clusterSubvalues1[3].textContent = `Rcv Err: ${formatNumber(recvErrors)}`;
+
+            // Data Transfer
+            const bytesSent = metrics.cluster_bytes_sent_total || 0;
+            const bytesReceived = metrics.cluster_bytes_received_total || 0;
+            const totalBytes = bytesSent + bytesReceived;
+
+            clusterCards[2].querySelector('.metric-value').textContent = formatBytes(totalBytes);
+            const clusterSubvalues2 = clusterCards[2].querySelectorAll('.metric-subvalue');
+            clusterSubvalues2[0].textContent = `Sent: ${formatBytes(bytesSent)}`;
+            clusterSubvalues2[1].textContent = `Received: ${formatBytes(bytesReceived)}`;
+
+            // Leadership Changes
+            const leaderChanges = metrics.cluster_leader_changed_total || 0;
+            clusterCards[3].querySelector('.metric-value').textContent = formatNumber(leaderChanges);
+
+            // Snapshot Operations
+            const produced = metrics.cluster_snapshot_produced_total || 0;
+            const failed = metrics.cluster_snapshot_failed_count_total || 0;
+            const transferred = metrics.cluster_snapshot_transfer_count_total || 0;
+            const size = metrics.cluster_snapshot_size_bytes || 0;
+            const totalSnapshots = produced + transferred;
+
+            clusterCards[4].querySelector('.metric-value').textContent = formatNumber(totalSnapshots);
+            const clusterSubvalues4 = clusterCards[4].querySelectorAll('.metric-subvalue');
+            clusterSubvalues4[0].textContent = `Prod: ${formatNumber(produced)}`;
+            clusterSubvalues4[1].textContent = `Fail: ${formatNumber(failed)}`;
+            clusterSubvalues4[2].textContent = `Xfer: ${formatNumber(transferred)}`;
+
+            // Snapshot Performance
+            const saveDuration = metrics.cluster_snapshot_save_duration_ms || 0;
+            const loadDuration = metrics.cluster_snapshot_load_duration_ms || 0;
+            const transferDuration = metrics.cluster_snapshot_transfer_duration_ms || 0;
+            const pauseDuration = metrics.cluster_snapshot_write_pause_duration_ms || 0;
+
+            clusterCards[5].querySelector('.metric-value').textContent = formatDuration(saveDuration);
+            const clusterSubvalues5 = clusterCards[5].querySelectorAll('.metric-subvalue');
+            clusterSubvalues5[0].textContent = `Save: ${formatDuration(saveDuration)}`;
+            clusterSubvalues5[1].textContent = `Load: ${formatDuration(loadDuration)}`;
+            clusterSubvalues5[2].textContent = `Xfer: ${formatDuration(transferDuration)}`;
+            clusterSubvalues5[3].textContent = `Pause: ${formatDuration(pauseDuration)}`;
+
+            // WAL Operations
+            const flushes = metrics.cluster_wal_flush_count_total || 0;
+            const lastIndex = metrics.cluster_last_applied_wal_index || 0;
+
+            clusterCards[6].querySelector('.metric-value').textContent = formatNumber(flushes);
+            const clusterSubvalues6 = clusterCards[6].querySelectorAll('.metric-subvalue');
+            clusterSubvalues6[0].textContent = `Flushes: ${formatNumber(flushes)}`;
+            clusterSubvalues6[1].textContent = `Last: ${formatNumber(lastIndex)}`;
+        }
+
+        // Refresh all nodes
+        async function refreshAllNodes() {
+            try {
+                const nodePromises = CONFIG.hosts.map(host => fetchNodeInfo(host));
+                const nodes = await Promise.all(nodePromises);
+
+                state.nodes = nodes;
+                updateNodesDisplay();
+                updateTimestamp();
+
+                // If selected node still exists, update its reference
+                if (state.selectedNode) {
+                    const selectedNode = nodes.find(n => n.host === state.selectedNode.host);
+                    if (selectedNode) {
+                        state.selectedNode = selectedNode;
+                    } else {
+                        // Selected node is no longer available
+                        state.selectedNode = null;
+                        selectedNodeNameEl.textContent = 'Select a node to view metrics';
+                        resetMetricsDisplay();
+                    }
+                }
+
+                // Discover new nodes from peers (future extension)
+                discoverNewNodesFromPeers();
+
+            } catch (error) {
+                console.error('Error refreshing nodes:', error);
+            }
+        }
+
+        // Discover new nodes from peers
+        async function discoverNewNodesFromPeers() {
+            const allPeers = new Set();
+            state.nodes.forEach(node => {
+                node.peers.forEach(peer => {
+                    if (peer && typeof peer === 'string') {
+                        const peerHost = `http://${peer}:8080`;
+                        if (!CONFIG.hosts.includes(peerHost)) {
+                            allPeers.add(peerHost);
+                        }
+                    }
+                });
+            });
+
+            // For future: add discovered peers to CONFIG.hosts
+            if (allPeers.size > 0) {
+                console.log('Discovered new peers:', Array.from(allPeers));
+            }
+        }
+
+        // Start metrics auto-refresh for selected node
+        function startMetricsAutoRefresh() {
+            if (state.metricsPollingInterval) {
+                clearInterval(state.metricsPollingInterval);
+            }
+
+            if (!state.autoRefresh) return;
+
+            state.metricsPollingInterval = setInterval(async () => {
+                if (state.selectedNode) {
+                    await fetchAndDisplayMetrics(state.selectedNode);
+                }
+            }, CONFIG.metricsRefreshInterval);
+        }
+
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            state.autoRefresh = !state.autoRefresh;
+
+            if (state.autoRefresh) {
+                refreshStatusEl.textContent = 'Active';
+                toggleAutoRefreshBtn.innerHTML = '<i class="fas fa-pause"></i><span>Pause</span>';
+                startMetricsAutoRefresh();
+            } else {
+                refreshStatusEl.textContent = 'Paused';
+                toggleAutoRefreshBtn.innerHTML = '<i class="fas fa-play"></i><span>Resume</span>';
+                if (state.metricsPollingInterval) {
+                    clearInterval(state.metricsPollingInterval);
+                    state.metricsPollingInterval = null;
+                }
+            }
+        }
+
+        // Initialize the dashboard
+        async function initDashboard() {
+            // Event delegation for node clicks
+            nodesContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.node-card[data-host]');
+                if (card) {
+                    const host = card.getAttribute('data-host');
+                    selectNode(host);
+                }
+            });
+
+            // Button events
+            refreshNodesBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                refreshAllNodes();
+            });
+
+            toggleAutoRefreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleAutoRefresh();
+            });
+
+            // Initial load
+            await refreshAllNodes();
+
+            // Start node auto-refresh
+            state.nodePollingInterval = setInterval(refreshAllNodes, CONFIG.nodeRefreshInterval);
+
+            // Initial timestamp
+            updateTimestamp();
+
+            // Select first available node by default
+            const firstAvailableNode = state.nodes.find(n => n.status !== 'unavailable');
+            if (firstAvailableNode) {
+                await selectNode(firstAvailableNode.host);
+            }
+        }
+
+        // Start the dashboard
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+
+</html>

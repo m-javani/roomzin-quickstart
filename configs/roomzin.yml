@@ -1,0 +1,31 @@
+core_config:
+  sys_cores_count: 4
+  average_room_types_per_property: 6
+
+tcp:
+  listen_addr: "0.0.0.0"
+  port: 7777
+  max_connections: 10000
+  tcp_user_timeout_ms: 200
+  tcp_keepalive_seconds: 30
+  tcp_recv_buffer_size: 262144
+  tcp_send_buffer_size: 131072
+
+cluster:
+  port: 17777
+  cert_path: "/opt/roomzin/certs/cert.pem"
+  key_path: "/opt/roomzin/certs/key.pem"
+  ca_cert_path: "/opt/roomzin/certs/ca.pem"
+  discovery_kind: "static"
+  discovery_yml_path: "/opt/roomzin/configs/discovery.yml"
+  discovery_http_host: ""
+
+auth_file: "/opt/roomzin/configs/auth.yml"
+api_port: 8080
+data_dir: "/opt/roomzin/data"
+maintenance_hour: 18
+max_dates_in_query: 14
+query_limit: 200
+snapshot_interval_sec: 60
+snapshot_trigger_count: 10000
+wal_flush_threshold: 2000

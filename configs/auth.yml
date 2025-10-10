@@ -1,0 +1,7 @@
+tokens:
+  - token: abc123
+    role: admin
+  - token: client-token
+    role: client
+  - token: mon456
+    role: monitoring

@@ -1,0 +1,12 @@
+# Token RzGate uses to talk to Roomzin cluster
+roomzin_token: "abc123"
+
+# Client tokens (full access)
+full_access_tokens:
+  - "rzgate123"
+  - "rzgate456"
+
+# Client tokens (read-only)
+read_only_tokens:
+  - "partner789"
+  - "externalABC"

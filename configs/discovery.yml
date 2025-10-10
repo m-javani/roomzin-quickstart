@@ -1,0 +1,21 @@
+nodes:
+  - node_id: roomzin-0
+    host: roomzin-0
+    identity:
+      kind: dns
+      value: roomzin-0
+    port: 17777
+
+  - node_id: roomzin-1
+    host: roomzin-1
+    identity:
+      kind: dns
+      value: roomzin-1
+    port: 17777
+
+  - node_id: roomzin-2
+    host: roomzin-2
+    identity:
+      kind: dns
+      value: roomzin-2
+    port: 17777

@@ -1,0 +1,16 @@
+roomzin_seed_hosts: "roomzin-0,roomzin-1,roomzin-2"
+roomzin_api_port: 8080
+roomzin_tcp_port: 7777
+http_port: 8777
+https_port: 3443
+http_enabled: true
+https_enabled: false
+auth_enabled: true
+tokens_path: "/opt/rzgate/configs/auth.yml"
+tls_cert_path: "/opt/rzgate/certs/cert.pem"
+tls_key_path: "/opt/rzgate/certs/key.pem"
+timeout: 2
+http_timeout: 2
+keep_alive: 30
+max_active_conns: 10000
+worker_threads: 0

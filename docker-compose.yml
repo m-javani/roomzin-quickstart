@@ -1,0 +1,150 @@
+services:
+  # ---------- Roomzin Cluster ----------
+  roomzin-0:
+    image: mehdyjavany/roomzin:latest
+    container_name: roomzin-0
+    hostname: roomzin-0
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "7877:7777"
+      - "7880:8080"
+    volumes:
+      - ./data/roomzin-0:/opt/roomzin/data
+      - ./certs/roomzin-0:/opt/roomzin/certs:ro
+      - ./configs:/opt/roomzin/configs:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100M
+    cap_add:
+      - NET_ADMIN
+    command: >
+      /opt/roomzin/roomzin run-clustered --config /opt/roomzin/configs/roomzin.yml --codecs /opt/roomzin/configs/codecs.yml --node-id roomzin-0 --shard-id shard1 --zone-id zone1 --initial-voters roomzin-0,roomzin-1,roomzin-2 --cert-path /opt/roomzin/certs/cert.pem --key-path /opt/roomzin/certs/key.pem --ca-cert-path /opt/roomzin/certs/ca.pem
+
+  roomzin-1:
+    image: mehdyjavany/roomzin:latest
+    container_name: roomzin-1
+    hostname: roomzin-1
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.11
+    ports:
+      - "7977:7777"
+      - "7980:8080"
+    volumes:
+      - ./data/roomzin-1:/opt/roomzin/data
+      - ./certs/roomzin-1:/opt/roomzin/certs:ro
+      - ./configs:/opt/roomzin/configs:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100M
+    cap_add:
+      - NET_ADMIN
+    command: >
+      /opt/roomzin/roomzin run-clustered --config /opt/roomzin/configs/roomzin.yml --codecs /opt/roomzin/configs/codecs.yml --node-id roomzin-1 --shard-id shard1 --zone-id zone1 --initial-voters roomzin-0,roomzin-1,roomzin-2 --cert-path /opt/roomzin/certs/cert.pem --key-path /opt/roomzin/certs/key.pem --ca-cert-path /opt/roomzin/certs/ca.pem
+
+  roomzin-2:
+    image: mehdyjavany/roomzin:latest
+    container_name: roomzin-2
+    hostname: roomzin-2
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.12
+    ports:
+      - "8077:7777"
+      - "8080:8080"
+    volumes:
+      - ./data/roomzin-2:/opt/roomzin/data
+      - ./certs/roomzin-2:/opt/roomzin/certs:ro
+      - ./configs:/opt/roomzin/configs:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100M
+    cap_add:
+      - NET_ADMIN
+    command: >
+      /opt/roomzin/roomzin run-clustered --config /opt/roomzin/configs/roomzin.yml --codecs /opt/roomzin/configs/codecs.yml --node-id roomzin-2 --shard-id shard1 --zone-id zone1 --initial-voters roomzin-0,roomzin-1,roomzin-2 --cert-path /opt/roomzin/certs/cert.pem --key-path /opt/roomzin/certs/key.pem --ca-cert-path /opt/roomzin/certs/ca.pem
+  # ---------- RzGate HTTP Proxy ----------
+  rzgate:
+    image: mehdyjavany/rzgate:latest
+    container_name: rzgate
+    hostname: rzgate
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.30
+    ports:
+      - "8777:8777"
+      - "3443:3443"
+    volumes:
+      # - ./certs/rzgate:/opt/rzgate/certs:ro
+      - ./rzgate:/opt/rzgate:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=10M
+    environment:
+      - RZ_LOG_LEVEL=info
+    command: >
+      /opt/rzgate/rzgate --config /opt/rzgate/rzgate.yml --tokens-path /opt/rzgate/auth.yml --http true --auth-enabled true
+    depends_on:
+      - roomzin-0
+      - roomzin-1
+      - roomzin-2
+    profiles:
+      - full
+      - monitoring
+  # ---------- Prometheus ----------
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    hostname: prometheus
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.20
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./token.txt:/etc/prometheus/token.txt:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - roomzin-0
+      - roomzin-1
+      - roomzin-2
+    profiles:
+      - full
+      - monitoring
+
+  # ---------- Grafana ----------
+  grafana:
+    image: grafana/grafana:13.1.0
+    container_name: grafana
+    hostname: grafana
+    networks:
+      roomzin-net:
+        ipv4_address: 172.20.0.21
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    depends_on:
+      - prometheus
+    profiles:
+      - full
+      - monitoring
+
+networks:
+  roomzin-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  prometheus-data:
+  grafana-data:
