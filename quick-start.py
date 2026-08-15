@@ -168,7 +168,6 @@ def render_docker_compose(topology):
     command: >
       /opt/roomzin/roomzin run-clustered
         --config /opt/roomzin/configs/roomzin.yml
-        --codecs /opt/roomzin/configs/codecs.yml
         --node-id ${node_id}
         --shard-id ${shard_id}
         --zone-id ${zone_id}
@@ -181,6 +180,7 @@ def render_docker_compose(topology):
         --tcp-listen-addr 0.0.0.0
         --api-listen-addr 0.0.0.0
         --quic-listen-addr 0.0.0.0
+        --data-dir /opt/roomzin/data
     depends_on:
       - rzid
       - rzpoint
@@ -381,7 +381,7 @@ ${depends}
       - /tmp:rw,noexec,nosuid,size=10M
     command: >
       /opt/rzgate/rzgate
-        --mode standalone
+        --mode router
         --roomzin-addr router-edge
         --roomzin-port 9000
         --listening-addr 0.0.0.0
@@ -481,8 +481,6 @@ def main():
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
         print(f"   - {node['id']} (TCP: {tcp_port}, API: {api_port})")
     print()
-    print("   Test with:")
-    print('   curl -X POST http://localhost:8777/api -H "Content-Type: application/json" -d \'{"command":"GETSEGMENTS","body":{}}\'')
 
 
 if __name__ == "__main__":

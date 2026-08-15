@@ -48,22 +48,20 @@ snapshot:
 		shard_num=$${shard_id##shard}; \
 		echo "  Building snapshot for $$shard_id..."; \
 		\
-		# Create temp output directory \
+		# Copy codecs.yml to the shard directory (build-snapshot needs it) \
+		cp configs/codecs.yml $$shard_dir/; \
+		\
 		mkdir -p generated/temp-snapshots/$$shard_id; \
 		\
-		# Build snapshot using roomzin container \
 		docker run --rm \
 			-v $$(pwd)/test-data:/opt/test-data:ro \
 			-v $$(pwd)/generated/temp-snapshots:/opt/snapshots \
-			-v $$(pwd)/configs:/opt/configs:ro \
 			mehdyjavany/roomzin:latest \
 			/opt/roomzin/roomzin build-snapshot \
 				--shard-id $$shard_id \
 				--input-path /opt/test-data/$$shard_id \
-				--output-path /opt/snapshots/$$shard_id \
-				--codecs /opt/configs/codecs.yml; \
+				--output-path /opt/snapshots/$$shard_id; \
 		\
-		# Copy snapshot file directly to each node's data directory (root, NOT subdirectory) \
 		node_idx=0; \
 		while [ $$node_idx -lt 3 ]; do \
 			node_dir="generated/data/roomzin-$$((shard_num-1))-$$node_idx"; \
@@ -74,12 +72,9 @@ snapshot:
 		echo "  ✓ $$shard_id snapshot copied to all 3 nodes"; \
 	done
 	@echo ""
-	@# Clean up temp
 	@rm -rf generated/temp-snapshots
 	@echo "$(GREEN)✅ Snapshots built and ready$(NC)"
-	@echo ""
-	@echo "  $(BLUE)Next: make start$(NC)"
-		
+	
 data: csv snapshot
 	@echo "$(GREEN)✅ Data preparation complete$(NC)"
 
@@ -165,5 +160,6 @@ logs-%:
 clean:
 	@echo "$(YELLOW)🧹 Cleaning up...$(NC)"
 	@cd generated && docker compose down -v --remove-orphans 2>/dev/null || true
-	@rm -rf generated
+	@sudo rm -rf generated
+	@sudo rm -rf test-data
 	@echo "$(GREEN)✅ Cleaned$(NC)"

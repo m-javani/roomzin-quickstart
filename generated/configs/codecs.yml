@@ -1,9 +1,0 @@
-rate_features:
-  - free_cancellation
-  - non_refundable
-  - pay_at_property
-  - includes_breakfast
-  - free_wifi
-  - no_prepayment
-  - partial_refund
-  - instant_confirmation

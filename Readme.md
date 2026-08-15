@@ -149,17 +149,8 @@ make start-monitoring   # Start only Prometheus + Grafana
 
 ```bash
 # Check all nodes and RzGate
-make test
+make health
 
-# Manual health check for Roomzin
-curl -H "Authorization: Bearer abc123" http://localhost:7880/healthz
-curl -H "Authorization: Bearer abc123" http://localhost:7880/peers
-
-# Manual health check for RzGate
-curl -X POST http://localhost:8777/api \
-  -H "Authorization: Bearer rzgate123" \
-  -H "Content-Type: application/json" \
-  -d '{"command":"GETSEGMENTS","body":{}}'
 ```
 
 ## Network Simulation (Optional)
