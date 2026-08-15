@@ -2,3 +2,6 @@ data/*
 roomzin
 rzgate/rzgate
 data
+test-data
+generated
+*.bin
