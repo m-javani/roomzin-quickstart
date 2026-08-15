@@ -356,12 +356,15 @@ ${depends}
         ipv4_address: 172.20.0.41
     ports:
       - "8081:8080"
+    volumes:
+      - ./configs/codecs.yml:/opt/rzid/codecs.yml:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=10M
     command: >
       /opt/rzid/rzid
         --addr 0.0.0.0
         --port 8080
+        --codecs-path /opt/rzid/codecs.yml
     depends_on:
       - rzpoint
 """)

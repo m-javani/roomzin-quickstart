@@ -112,8 +112,8 @@ test-query:
 	@echo ""
 
 stop:
-	@echo "$(YELLOW)🛑 Stopping containers...$(NC)"
-	cd generated && docker compose down -v --remove-orphans 2>/dev/null || true
+	@echo "$(YELLOW)🛑 Stopping containers (immediate)...$(NC)"
+	cd generated && docker compose down -t 0 -v --remove-orphans 2>/dev/null || true
 	@echo "$(GREEN)✅ Stopped$(NC)"
 
 health:
