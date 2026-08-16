@@ -1,56 +1,37 @@
 #!/usr/bin/env python3
 """
-RzPoint - Simple Echo Resolver for Roomzin Quick-Start
+RzPoint - Simple Resolver for Roomzin Quick-Start
 
-Returns the ID from the URL path as the hostname.
-For Docker Compose, container names = hostnames = IDs.
-
-Examples:
-  GET /routers/router-zone-0     → "router-zone-0"
-  GET /bridges/bridge-0          → "bridge-0"
-  GET /shards/shard1/nodes/roomzin-0-0 → "roomzin-0-0"
+Returns IP from mapping for any ID.
+If ID not found, returns the ID itself (fallback).
 """
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import os
-import sys
-import re
+import argparse
 import json
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-class EchoHandler(BaseHTTPRequestHandler):
-    """Handle GET requests by echoing the ID from the path"""
-    
+
+class ResolverHandler(BaseHTTPRequestHandler):
+    resolver_map = {}
+
     def do_GET(self):
-        """Extract ID from path and return it"""
-        
-        # Parse the path
-        # /routers/router-zone-0 → router-zone-0
-        # /bridges/bridge-0 → bridge-0
-        # /shards/shard1/nodes/roomzin-0-0 → roomzin-0-0
-        
         parts = self.path.strip('/').split('/')
-        
-        if not parts or parts[0] == '':
-            # Empty path - return empty string
-            node_id = ''
-        elif 'nodes' in parts:
-            # Path: /shards/{shard}/nodes/{node_id}
+
+        if 'nodes' in parts:
             idx = parts.index('nodes')
             node_id = parts[idx + 1] if idx + 1 < len(parts) else ''
         else:
-            # Path: /routers/{id} or /bridges/{id}
             node_id = parts[-1] if parts[-1] else ''
-        
-        # Send response
+
+        ip = self.server.resolver_map.get(node_id, node_id)
+
         self.send_response(200)
         self.send_header('Content-Type', 'text/plain')
         self.end_headers()
-        
-        # Echo the ID back
-        self.wfile.write(node_id.encode('utf-8'))
-    
+        self.wfile.write(ip.encode('utf-8'))
+
     def do_POST(self):
-        """Handle POST requests - for health checks"""
         if self.path == '/health':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -59,29 +40,55 @@ class EchoHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
-    
+
     def log_message(self, format, *args):
-        """Silence HTTP request logs to keep output clean"""
-        # Uncomment for debugging:
-        # print(f"[RzPoint] {format % args}")
         pass
 
+
+def parse_mapping(mapping_str):
+    """Parse 'id1:ip1,id2:ip2' into dict"""
+    result = {}
+    if mapping_str:
+        for pair in mapping_str.split(','):
+            if ':' in pair:
+                key, val = pair.split(':', 1)
+                result[key.strip()] = val.strip()
+    return result
+
+
 def main():
-    """Start the RzPoint echo server"""
-    port = int(os.environ.get('RZPOINT_PORT', '9090'))
-    host = os.environ.get('RZPOINT_HOST', '0.0.0.0')
-    
-    print(f"🔄 RzPoint echo resolver running on {host}:{port}")
-    print(f"   Example: GET /routers/router-zone-0 → router-zone-0")
-    print(f"   Health:  GET /health → {{'status': 'ok'}}")
-    
-    server = HTTPServer((host, port), EchoHandler)
-    
+    parser = argparse.ArgumentParser(description='RzPoint resolver')
+    parser.add_argument('--mapping', type=str, default=None, help='Comma-separated id:ip mappings')
+    parser.add_argument('--port', type=int, default=int(os.environ.get('RZPOINT_PORT', '9090')))
+    args = parser.parse_args()
+
+    # Read from env if not provided via CLI
+    mapping_str = args.mapping
+    if mapping_str is None:
+        mapping_str = os.environ.get('RZPOINT_MAPPING', '')
+
+    resolver_map = parse_mapping(mapping_str)
+
+    print(f"🔄 RzPoint resolver running on 0.0.0.0:{args.port}")
+    print(f"   Loaded {len(resolver_map)} mappings")
+
+    # Print first few mappings for visibility
+    if resolver_map:
+        items = list(resolver_map.items())[:5]
+        for key, val in items:
+            print(f"     {key} → {val}")
+        if len(resolver_map) > 5:
+            print(f"     ... and {len(resolver_map) - 5} more")
+
+    server = HTTPServer(('0.0.0.0', args.port), ResolverHandler)
+    server.resolver_map = resolver_map
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 Shutting down RzPoint...")
+        print("\n🛑 Shutting down...")
         server.shutdown()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

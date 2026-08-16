@@ -127,6 +127,13 @@ def get_ip(component_type, index):
     }
     return f"172.20.0.{base_ips[component_type] + index}"
 
+def build_resolver_mapping(topology):
+    """Build ID:IP mapping string for RzPoint"""
+    parts = []
+    for node in topology["nodes"]:
+        ip = get_ip("roomzin", node["shard_index"] * 3 + node["node_index"])
+        parts.append(f"{node['id']}:{ip}")
+    return ",".join(parts)
 
 # ---------- Docker Compose Rendering ----------
 
@@ -329,7 +336,9 @@ ${depends}
 ))
     
     # RzPoint (always generated)
-    services.append("""
+    mapping_str = build_resolver_mapping(topology)
+
+    services.append(Template("""
   rzpoint:
     image: python:3.11-slim
     container_name: rzpoint
@@ -342,12 +351,13 @@ ${depends}
     working_dir: /opt/rzpoint
     volumes:
       - ./rzpoint-echo.py:/opt/rzpoint/rzpoint-echo.py:ro
-    command: python3 /opt/rzpoint/rzpoint-echo.py
+    command: python3 -u /opt/rzpoint/rzpoint-echo.py
     environment:
       - RZPOINT_PORT=9090
+      - RZPOINT_MAPPING=${mapping}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=10M
-""")
+""").substitute(mapping=mapping_str))
     
     # RzID (always generated)
     services.append("""
