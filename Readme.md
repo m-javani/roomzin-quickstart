@@ -13,235 +13,281 @@
 > 
 > **Do not use this setup in production.**
 
-A 3-node Roomzin cluster with optional monitoring (Prometheus + Grafana) and RzGate HTTP/JSON proxy for local testing and development.
+A complete Roomzin test environment with configurable components for local development and testing.
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
+- Python 3.6+ (for data generation)
 - Make (optional, for convenience)
 
 ## Quick Start
 
 ```bash
-# Pull images from Docker Hub and start the cluster
+# Clone the repository
+git clone https://github.com/m-javani/roomzin-quickstart
+cd roomzin-quickstart
+
+# Start the full stack (2 shards, 2 zones, all components)
 make start
 
 # Check cluster health
-make test
+make health
 
 # View logs
 make logs
 
-# Stop the cluster
+# Stop and clean up everything
 make stop
 ```
+
+## Component Selection
+
+Control which components are started using environment variables:
+
+```bash
+# Full stack (default)
+make start
+
+# Just core cluster (for bridge testing)
+make start BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+
+# Cluster + Bridge (for zone router testing)
+make start BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+
+# Cluster + Bridge + Zone Router (for edge router testing)
+make start BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=0 RZGATE=0
+
+# Full stack (explicit)
+make start BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=1 RZGATE=1
+```
+
+## Scaling
+
+```bash
+# Custom number of shards and zones
+make start SHARDS=3 ZONES=3
+
+# Minimal cluster (1 shard, 1 zone, no extra components)
+make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+```
+
+## What Happens When You Run `make start`
+
+1. **Generate test data** - Creates CSV files with sample properties and packages
+2. **Build snapshots** - Uses Roomzin to build snapshots from the CSV data
+3. **Start containers** - Brings up all configured services
+
+Everything is automated. No manual steps required.
+
+## Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make start` | Generate data, build snapshots, and start the environment |
+| `make stop` | Stop everything and clean up all generated files |
+| `make health` | Check cluster health |
+| `make logs` | View all container logs |
+| `make logs-<service>` | View specific service logs |
+| `make test-query` | Run test queries via RZGate |
+| `make clean` | Remove generated directory and test data |
+| `make help` | Show available commands |
+
+## Access Points
+
+| Component | Address | Port |
+|-----------|---------|------|
+| RZGate HTTP | `http://localhost` | 8777 |
+| RzID HTTP | `http://localhost` | 8081 |
+| RzPoint HTTP | `http://localhost` | 9090 |
+| Edge Router (TCP) | `localhost` | 9200 |
+
+**Roomzin Nodes (2 shards × 3 nodes):**
+
+| Node | TCP Port | API Port |
+|------|----------|----------|
+| roomzin-0-0 | 7800 | 8000 |
+| roomzin-0-1 | 7801 | 8001 |
+| roomzin-0-2 | 7802 | 8002 |
+| roomzin-1-0 | 7810 | 8010 |
+| roomzin-1-1 | 7811 | 8011 |
+| roomzin-1-2 | 7812 | 8012 |
+
+## Testing
+
+### Health Check
+
+```bash
+make health
+```
+
+### Test Queries
+
+```bash
+make test-query
+```
+
+Or send manual requests:
+
+```bash
+# Search properties
+curl -X POST http://localhost:8777/api \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "SEARCHPROP",
+    "segment": "segment_1",
+    "body": {
+      "segment": "segment_1",
+      "limit": 1
+    }
+  }'
+
+# Search availability
+curl -X POST http://localhost:8777/api \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "SEARCHAVAIL",
+    "segment": "segment_1",
+    "body": {
+      "segment": "segment_1",
+      "room_type": "room1",
+      "type": "hotel",
+      "date": ["2026-08-14"],
+      "limit": 1
+    }
+  }'
+```
+
+## Testing Individual Components
+
+For development of specific components, start only the required dependencies:
+
+### Testing RzBridge
+
+```bash
+make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+```
+
+This starts:
+- 3 Roomzin nodes (1 shard)
+- RzID
+- RzPoint
+
+Then run your local RzBridge binary connecting to:
+- RzID: `localhost:8081`
+- RzPoint: `localhost:9090`
+
+### Testing RzRouter (Zone Router)
+
+```bash
+make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+```
+
+This starts: cluster + Bridge. Run your local Zone Router.
+
+### Testing RzRouter (Edge Router)
+
+```bash
+make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=0 RZGATE=0
+```
+
+This starts: cluster + Bridge + Zone Router. Run your local Edge Router.
+
+### Testing RZGate
+
+```bash
+make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=1 RZGATE=0
+```
+
+This starts: full stack without RZGate. Run your local RZGate.
 
 ## Docker Images
 
 This quickstart pulls pre-built images from Docker Hub:
 
 - [`mehdyjavany/roomzin:latest`](https://hub.docker.com/r/mehdyjavany/roomzin) - Roomzin node
-- [`mehdyjavany/rzgate:latest`](https://hub.docker.com/r/mehdyjavany/rzgate) - RzGate HTTP/JSON proxy
-
-Images are automatically pulled when you run `make start` or `docker compose up`. To update to the latest version:
-
-```bash
-docker pull mehdyjavany/roomzin:latest
-docker pull mehdyjavany/rzgate:latest
-make stop && make start
-```
+- [`mehdyjavany/rzid:latest`](https://hub.docker.com/r/mehdyjavany/rzid) - Control plane
+- [`mehdyjavany/rzbridge:latest`](https://hub.docker.com/r/mehdyjavany/rzbridge) - Bridge proxy
+- [`mehdyjavany/rzrouter:latest`](https://hub.docker.com/r/mehdyjavany/rzrouter) - Router
+- [`mehdyjavany/rzgate:latest`](https://hub.docker.com/r/mehdyjavany/rzgate) - HTTP/JSON proxy
 
 ## Directory Structure
 
 ```
-roomzin-cluster/
-├── rzgate/
-│   ├── rzgate.yml             # RzGate config
-│   └── auth.yml               # RzGate auth tokens
-├── dashboard.html             # Standalone HTML dashboard
-├── docker-compose.yml         # 3 nodes + RzGate + Prometheus + Grafana
-├── Makefile                   # Automation targets
-├── configs/
-│   ├── roomzin.yml           # Main config
-│   ├── auth.yml              # Authentication tokens
-│   ├── codecs.yml            # Rate features
-│   └── discovery.yml         # Static discovery config
-├── certs/
-│   ├── roomzin-0/            # Node 0 TLS certs
-│   ├── roomzin-1/            # Node 1 TLS certs
-│   ├── roomzin-2/            # Node 2 TLS certs
-│   └── rzgate/               # RzGate TLS certs (optional)
-├── data/
-│   ├── roomzin-0/            # Node 0 data (snapshots, WAL)
-│   ├── roomzin-1/            # Node 1 data
-│   └── roomzin-2/            # Node 2 data
-├── dashboards/
-│   ├── dashboard.json        # Grafana dashboard
-│   └── dashboard.yml         # Grafana dashboard provisioning
-├── datasources/
-│   └── datasource.yml        # Grafana datasource config
-├── prometheus.yml            # Prometheus scrape config
-└── token.txt                 # Prometheus bearer token
+roomzin-quickstart/
+├── quick-start.py           # Generator script
+├── gen_data.py              # Test data generator
+├── test_query.py            # Query test script
+├── rzpoint-echo.py          # RzPoint echo resolver
+├── Makefile                 # Automation targets
+├── certs/                   # Pre-generated TLS certificates
+├── configs/                 # Configuration files
+│   ├── roomzin.yml
+│   └── codecs.yml
+└── generated/               # Generated at runtime
+    ├── docker-compose.yml
+    ├── data/                # Per-node data with snapshots
+    ├── certs/
+    └── configs/
 ```
 
-## Make Commands
-
-| Command | Description |
-|---------|-------------|
-| `make start` | Pull images, start full stack (cluster + RzGate + monitoring) |
-| `make start-minimal` | Start Roomzin nodes only (no RzGate, no monitoring) |
-| `make start-monitoring` | Start Prometheus + Grafana only |
-| `make stop` | Stop everything and clean up data |
-| `make test` | Check cluster and RzGate health |
-| `make logs` | View all container logs |
-| `make help` | Show available commands |
-
-## Access Points
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Roomzin Node 0 | TCP: `localhost:7877`, API: `localhost:7880` | Token: `abc123` |
-| Roomzin Node 1 | TCP: `localhost:7977`, API: `localhost:7980` | Token: `abc123` |
-| Roomzin Node 2 | TCP: `localhost:8077`, API: `localhost:8080` | Token: `abc123` |
-| RzGate HTTP | `http://localhost:8777/api` | Token: `rzgate123` |
-| RzGate HTTPS | `https://localhost:3443/api` | Token: `rzgate123` |
-| Prometheus | `http://localhost:9090` | - |
-| Grafana | `http://localhost:3000` | `admin/admin` |
-
-## Monitoring Options
-
-### Option 1: HTML Dashboard (Lightweight)
-
-For a quick visual overview without Grafana:
+## Updating Images
 
 ```bash
-make start-minimal   # Start only Roomzin nodes
-# Then open dashboard.html in your browser
-```
-
-The HTML dashboard provides:
-- Node status (Leader/Follower/Offline)
-- TCP connections and commands
-- Cluster traffic overview
-- WAL and snapshot metrics
-- Auto-refreshes every 30 seconds
-
-### Option 2: Grafana (Full Monitoring)
-
-For detailed monitoring with persistent dashboards:
-
-```bash
-make start   # Full stack with Grafana
-```
-
-Grafana provides:
-- Pre-configured Prometheus datasource
-- Auto-imported Roomzin dashboard
-- Customizable panels and alerts
-- Historical data visualization
-
-**Note:** If you start with `make start-minimal`, you can add monitoring later:
-```bash
-make start-monitoring   # Start only Prometheus + Grafana
-```
-
-## Testing Cluster Health
-
-```bash
-# Check all nodes and RzGate
-make health
-
-```
-
-## Network Simulation (Optional)
-
-Add network delay to a node to test cluster behavior:
-
-```bash
-# Add 3ms delay to roomzin-2
-docker exec roomzin-2 tc qdisc add dev eth0 root netem delay 3ms
-
-# Verify it's working
-docker exec roomzin-2 tc qdisc show dev eth0
-
-# Remove delay
-docker exec roomzin-2 tc qdisc del dev eth0 root
+docker pull mehdyjavany/roomzin:latest
+docker pull mehdyjavany/rzid:latest
+docker pull mehdyjavany/rzbridge:latest
+docker pull mehdyjavany/rzrouter:latest
+docker pull mehdyjavany/rzgate:latest
+make stop && make start
 ```
 
 ## Troubleshooting
 
 ### Cluster fails to start
 
-Check logs:
 ```bash
-docker compose logs roomzin-0
-docker compose logs prometheus
-docker compose logs rzgate
+make logs
+# Or specific service
+make logs-roomzin-0-0
 ```
 
-### Node not joining cluster
+### Nodes not forming cluster
 
-Verify certificates and discovery:
 ```bash
-docker exec roomzin-0 cat /opt/roomzin/configs/discovery.yml
-docker exec roomzin-0 ls -la /opt/roomzin/certs/
-```
-
-### RzGate can't connect to Roomzin
-
-Verify RzGate config:
-```bash
-docker exec rzgate cat /opt/rzgate/configs/rzgate.yml
-# Check roomzin_seed_hosts: "roomzin-0,roomzin-1,roomzin-2"
-```
-
-### Authentication errors
-
-Check token in `configs/auth.yml` matches what you're using:
-```bash
-cat configs/auth.yml
-# Should contain: abc123 (for Roomzin)
-# Should contain: rzgate123 (for RzGate)
+make health
 ```
 
 ### Port conflicts
 
-If ports 7877, 7977, 8077, 7880, 7980, 8080, 8777, 3443 are in use, update the port mappings in `docker-compose.yml`.
+Modify port mappings in `generated/docker-compose.yml` or stop services using those ports.
 
-## Updating Images
+### Slow shutdown
 
-To update to the latest Roomzin or RzGate images:
-
-```bash
-# Pull latest images
-docker pull mehdyjavany/roomzin:latest
-docker pull mehdyjavany/rzgate:latest
-
-# Restart the cluster
-make stop && make start
-```
+`make stop` uses immediate shutdown (`docker compose kill`). Should be fast.
 
 ## Clean Up
 
 ```bash
-# Stop everything and remove containers, networks, volumes
+# Stop everything and remove all generated files
 make stop
 
-# Remove dangling images
-docker image prune -f
+# Same as stop
+make clean
 ```
 
 ## Notes
 
-1. **Certs** are per-node and must be placed in `certs/roomzin-{0,1,2}/`
-2. **Data** persists in `./data/` and is cleaned up on `make stop`
-3. **Monitoring** containers run in the same Docker network and can resolve node hostnames
-4. **Prometheus v2.52.0** and **Grafana v13.1.0** are used
-5. **Images** are pulled from Docker Hub - no local build required
-6. **Pre-built images** use Alpine Linux for minimal size (~17MB per node)
+1. **Certs** are pre-generated and shared across all nodes (hostname verification disabled for testing)
+2. **Data** is generated fresh on each `make start`
+3. **Snapshots** are built automatically from test data
+4. **All components** are stateless except Roomzin nodes (data persists until `make stop`)
 
 ## Related Repositories
 
+- [Roomzin](https://github.com/m-javani/roomzin) - Main repository
 - [RzGate](https://github.com/m-javani/rzgate) - HTTP/JSON proxy
-- [Roomzin Bench](https://github.com/m-javani/roomzin-bench) - Benchmarking tool
+- [RzID](https://github.com/m-javani/rzid) - Control plane
+- [RzBridge](https://github.com/m-javani/rzbridge) - Bridge proxy
+- [RzRouter](https://github.com/m-javani/rzrouter) - Router
 - [Documentation](https://m-javani.github.io/roomzin-doc/) - Official docs

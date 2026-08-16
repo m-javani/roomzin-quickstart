@@ -130,19 +130,18 @@ def get_ip(component_type, index):
 
 # ---------- Docker Compose Rendering ----------
 
-def render_docker_compose(topology):
+def render_docker_compose(topology, args):
     """Render docker-compose.yml from template"""
     
     # Build service definitions
     services = []
     
-    # Roomzin nodes
+    # Roomzin nodes (always generated)
     for node in topology["nodes"]:
         tcp_port = get_ports("roomzin_tcp", node["shard_index"], node["node_index"])
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
         ip = get_ip("roomzin", node["shard_index"] * 3 + node["node_index"])
         
-        # Initial voters: all 3 node IDs for this shard
         shard_nodes = [n["id"] for n in topology["nodes"] if n["shard_id"] == node["shard_id"]]
         voters = ",".join(shard_nodes)
         
@@ -195,16 +194,16 @@ def render_docker_compose(topology):
         )
         services.append(service)
     
-    # Bridges
-    for bridge in topology["bridges"]:
-        port = get_ports("bridge", bridge["shard_index"])
-        ip = get_ip("bridge", bridge["shard_index"])
-        
-        # Depends on the 3 nodes in this shard
-        shard_nodes = [n["id"] for n in topology["nodes"] if n["shard_id"] == bridge["shard_id"]]
-        depends = "\n".join([f"      - {n}" for n in shard_nodes])
-        
-        service = Template("""
+    # Bridges (conditional)
+    if args.bridge == 1:
+        for bridge in topology["bridges"]:
+            port = get_ports("bridge", bridge["shard_index"])
+            ip = get_ip("bridge", bridge["shard_index"])
+            
+            shard_nodes = [n["id"] for n in topology["nodes"] if n["shard_id"] == bridge["shard_id"]]
+            depends = "\n".join([f"      - {n}" for n in shard_nodes])
+            
+            service = Template("""
   ${bridge_id}:
     image: mehdyjavany/rzbridge:latest
     container_name: ${bridge_id}
@@ -232,25 +231,26 @@ def render_docker_compose(topology):
       - rzpoint
 ${depends}
 """).substitute(
-            bridge_id=bridge["id"],
-            shard_id=bridge["shard_id"],
-            zone_id=bridge["zone_id"],
-            ip=ip,
-            port=port,
-            depends=depends,
-        )
-        services.append(service)
+                bridge_id=bridge["id"],
+                shard_id=bridge["shard_id"],
+                zone_id=bridge["zone_id"],
+                ip=ip,
+                port=port,
+                depends=depends,
+            )
+            services.append(service)
     
-    # Zone Routers
-    for router in topology["zone_routers"]:
-        port = get_ports("zone_router", zone_index=router["zone_index"])
-        ip = get_ip("zone_router", router["zone_index"])
-        
-        # Depends on bridges in this zone
-        zone_bridges = [b["id"] for b in topology["bridges"] if b["zone_id"] == router["zone_id"]]
-        depends = "\n".join([f"      - {b}" for b in zone_bridges]) if zone_bridges else "      - rzid"
-        
-        service = Template("""
+    # Zone Routers (conditional)
+    if args.zone_router == 1:
+        for router in topology["zone_routers"]:
+            port = get_ports("zone_router", zone_index=router["zone_index"])
+            ip = get_ip("zone_router", router["zone_index"])
+            
+            # Depends on bridges in this zone (if bridges exist)
+            zone_bridges = [b["id"] for b in topology["bridges"] if b["zone_id"] == router["zone_id"]]
+            depends = "\n".join([f"      - {b}" for b in zone_bridges]) if zone_bridges and args.bridge == 1 else "      - rzid"
+            
+            service = Template("""
   ${router_id}:
     image: mehdyjavany/rzrouter:latest
     container_name: ${router_id}
@@ -277,23 +277,27 @@ ${depends}
       - rzpoint
 ${depends}
 """).substitute(
-            router_id=router["id"],
-            zone_id=router["zone_id"],
-            ip=ip,
-            port=port,
-            depends=depends,
-        )
-        services.append(service)
+                router_id=router["id"],
+                zone_id=router["zone_id"],
+                ip=ip,
+                port=port,
+                depends=depends,
+            )
+            services.append(service)
     
-    # Edge Router (single instance)
-    edge_router = topology["edge_router"]
-    port = get_ports("edge_router")
-    ip = get_ip("edge_router", 0)
-    
-    # Depends on all zone routers
-    depends = "\n".join([f"      - {r['id']}" for r in topology["zone_routers"]])
-    
-    services.append(Template("""
+    # Edge Router (conditional)
+    if args.edge_router == 1:
+        edge_router = topology["edge_router"]
+        port = get_ports("edge_router")
+        ip = get_ip("edge_router", 0)
+        
+        # Depends on all zone routers (if they exist)
+        if args.zone_router == 1:
+            depends = "\n".join([f"      - {r['id']}" for r in topology["zone_routers"]])
+        else:
+            depends = "      - rzid"
+        
+        services.append(Template("""
   ${router_id}:
     image: mehdyjavany/rzrouter:latest
     container_name: ${router_id}
@@ -324,7 +328,7 @@ ${depends}
     depends=depends,
 ))
     
-    # RzPoint (Python echo server)
+    # RzPoint (always generated)
     services.append("""
   rzpoint:
     image: python:3.11-slim
@@ -345,7 +349,7 @@ ${depends}
       - /tmp:rw,noexec,nosuid,size=10M
 """)
     
-    # RzID
+    # RzID (always generated)
     services.append("""
   rzid:
     image: mehdyjavany/rzid:latest
@@ -369,8 +373,9 @@ ${depends}
       - rzpoint
 """)
     
-    # RZGate
-    services.append("""
+    # RZGate (conditional)
+    if args.rzgate == 1 and args.edge_router == 1:
+        services.append("""
   rzgate:
     image: mehdyjavany/rzgate:latest
     container_name: rzgate
@@ -384,7 +389,7 @@ ${depends}
       - /tmp:rw,noexec,nosuid,size=10M
     command: >
       /opt/rzgate/rzgate
-        --mode router
+        --mode standalone
         --roomzin-addr router-edge
         --roomzin-port 9000
         --listening-addr 0.0.0.0
@@ -396,11 +401,13 @@ ${depends}
     depends_on:
       - router-edge
 """)
-
+    elif args.rzgate == 1 and args.edge_router == 0:
+        # RZGate without edge router doesn't make sense - warn user
+        print("⚠️  Warning: RZGate requires edge-router. Ignoring --rzgate 1")
+    
     # Combine all services
     all_services = "".join(services)
     
-    # Build complete compose file
     compose = Template("""services:${services}
 
 networks:
@@ -413,7 +420,6 @@ networks:
     
     return compose
 
-
 # ---------- Main Script ----------
 
 def main():
@@ -422,6 +428,14 @@ def main():
     parser.add_argument("--zones", type=int, default=2, help="Number of zones (default: 2)")
     parser.add_argument("--output", type=str, default="./generated", help="Output directory (default: ./generated)")
     parser.add_argument("--force", action="store_true", help="Overwrite existing output directory")
+    parser.add_argument("--bridge", type=int, default=1, choices=[0,1], 
+                    help="Include RzBridge (0 or 1, default: 1)")
+    parser.add_argument("--zone-router", type=int, default=1, choices=[0,1], 
+                        help="Include Zone Router (0 or 1, default: 1)")
+    parser.add_argument("--edge-router", type=int, default=1, choices=[0,1], 
+                        help="Include Edge Router (0 or 1, default: 1)")
+    parser.add_argument("--rzgate", type=int, default=1, choices=[0,1], 
+                        help="Include RZGate (0 or 1, default: 1)")
     args = parser.parse_args()
     
     # Validate
@@ -463,7 +477,7 @@ def main():
     
     # Generate docker-compose.yml
     print("📝 Generating docker-compose.yml...")
-    compose = render_docker_compose(topology)
+    compose = render_docker_compose(topology, args)
     (output_dir / "docker-compose.yml").write_text(compose)
     
     print()
@@ -473,17 +487,42 @@ def main():
     print(f"   docker compose up -d")
     print()
     print("   Service endpoints:")
-    print("   - RZGate:  http://localhost:8777")
     print("   - RzID:    http://localhost:8081")
     print("   - RzPoint: http://localhost:9090")
-    print("   - Edge Router (TCP): localhost:9200")
+    
+    # Show optional components based on flags
+    if args.bridge == 1:
+        for bridge in topology["bridges"]:
+            port = get_ports("bridge", bridge["shard_index"])
+            print(f"   - {bridge['id']} (TCP): localhost:{port}")
+    
+    if args.zone_router == 1:
+        for router in topology["zone_routers"]:
+            port = get_ports("zone_router", zone_index=router["zone_index"])
+            print(f"   - {router['id']} (TCP): localhost:{port}")
+    
+    if args.edge_router == 1:
+        print("   - router-edge (TCP): localhost:9200")
+    
+    if args.rzgate == 1 and args.edge_router == 1:
+        print("   - RZGate:  http://localhost:8777")
+    
     print()
     print(f"   Roomzin nodes ({args.shards} shards × 3 nodes):")
     for node in topology["nodes"]:
         tcp_port = get_ports("roomzin_tcp", node["shard_index"], node["node_index"])
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
         print(f"   - {node['id']} (TCP: {tcp_port}, API: {api_port})")
-    print()
+    
+    # Show example test command only if full stack is available
+    if args.rzgate == 1 and args.edge_router == 1:
+        print()
+        print("   Test with:")
+        print('   curl -X POST http://localhost:8777/api -H "Content-Type: application/json" -d \'{"command":"GETSEGMENTS","segment":"","body":{}}\'')
+    else:
+        print()
+        print("   For testing, connect your local service to the running cluster.")
+        print("   Example: RzBridge connects to RzID at localhost:8081 and RzPoint at localhost:9090")
 
 
 if __name__ == "__main__":
