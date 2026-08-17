@@ -442,7 +442,7 @@ ${depends}
       - /tmp:rw,noexec,nosuid,size=10M
     command: >
       /opt/rzgate/rzgate
-        --mode standalone
+        --mode router
         --roomzin-addr router-edge
         --roomzin-port 9000
         --listening-addr 0.0.0.0
