@@ -301,7 +301,7 @@ ${depends}
               depends = "      - rzid"
           
           service = Template("""
-    ${router_id}:
+  ${router_id}:
       image: mehdyjavany/rzrouter:latest
       container_name: ${router_id}
       hostname: ${router_id}
@@ -346,7 +346,7 @@ ${depends}
         else:
             depends = "      - rzid"
         
-        services.append(Template("""
+        service = Template("""
   ${router_id}:
     image: mehdyjavany/rzrouter:latest
     container_name: ${router_id}
@@ -375,7 +375,8 @@ ${depends}
     ip=ip,
     port=port,
     depends=depends,
-))
+)
+        services.append(service)
     
     # ---------- RzPoint (always) ----------
     mapping_str = build_resolver_mapping(topology)

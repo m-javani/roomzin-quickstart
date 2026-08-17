@@ -63,8 +63,14 @@ make start level=bridge
 # Cluster + Bridges + Zone Routers (for zone router testing)
 make start level=zone
 
-# Full stack without HA
+# Cluster + Bridges + Zone Routers + Edge Router (for edge router testing)
+make start level=edge
+
+# Full stack without RZGate
 make start level=full
+
+# Full stack with RZGate
+make start level=full rzgate=true
 
 # Full stack with HA (2 bridges per shard, 2 zone routers per zone)
 make start level=full ha=true
@@ -207,13 +213,14 @@ For development of specific components, start only the required dependencies:
 ### Testing RzBridge
 
 ```bash
-make start SHARDS=1 ZONES=1 level=bridge ha=false
+make start SHARDS=1 ZONES=1 level=bridge
 ```
 
 This starts:
 - 3 Roomzin nodes (1 shard)
 - RzID
 - RzPoint
+- Bridges
 
 Then run your local RzBridge binary connecting to:
 - RzID: `localhost:8081`
@@ -225,7 +232,7 @@ Then run your local RzBridge binary connecting to:
 make start SHARDS=1 ZONES=1 level=zone
 ```
 
-This starts: cluster + Bridges. Run your local Zone Router.
+This starts: cluster + Bridges + Zone Routers. Run your local Zone Router.
 
 ### Testing RzRouter (Edge Router)
 
@@ -233,12 +240,12 @@ This starts: cluster + Bridges. Run your local Zone Router.
 make start SHARDS=1 ZONES=1 level=edge
 ```
 
-This starts: cluster + Bridges + Zone Routers. Run your local Edge Router.
+This starts: cluster + Bridges + Zone Routers + Edge Router. Run your local Edge Router.
 
 ### Testing RZGate
 
 ```bash
-make start SHARDS=1 ZONES=1 level=full rzgate=false
+make start SHARDS=1 ZONES=1 level=edge rzgate=false
 ```
 
 This starts: full stack without RZGate. Run your local RZGate.
@@ -251,6 +258,28 @@ make start SHARDS=1 ZONES=1 level=bridge ha=true
 
 # Test with 2 zone routers per zone
 make start SHARDS=1 ZONES=1 level=zone ha=true
+```
+
+## Usage Examples
+
+```bash
+# Just cluster
+make start SHARDS=1 ZONES=1 LEVEL=cluster
+
+# Cluster + Bridges
+make start SHARDS=1 ZONES=1 LEVEL=bridge
+
+# Cluster + Bridges + Zone Routers
+make start SHARDS=1 ZONES=1 LEVEL=zone
+
+# Cluster + Bridges + Zone Routers + Edge Router
+make start SHARDS=1 ZONES=1 LEVEL=edge
+
+# Full stack (includes RZGate)
+make start SHARDS=1 ZONES=1 LEVEL=full RZGATE=true
+
+# Full stack with HA
+make start SHARDS=1 ZONES=1 LEVEL=full HA=true RZGATE=true
 ```
 
 ## Docker Images
