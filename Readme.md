@@ -43,33 +43,59 @@ make stop
 
 ## Component Selection
 
-Control which components are started using environment variables:
+Control which components are started using `level`:
+
+| Level | Components |
+|-------|------------|
+| `cluster` | Roomzin nodes + RzID + RzPoint |
+| `bridge` | cluster + Bridges |
+| `zone` | bridge + Zone Routers |
+| `edge` | zone + Edge Router |
+| `full` | edge + RZGate |
 
 ```bash
-# Full stack (default)
+# Just cluster (default)
 make start
 
-# Just core cluster (for bridge testing)
-make start BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+# Cluster + Bridges (for bridge testing)
+make start level=bridge
 
-# Cluster + Bridge (for zone router testing)
-make start BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+# Cluster + Bridges + Zone Routers (for zone router testing)
+make start level=zone
 
-# Cluster + Bridge + Zone Router (for edge router testing)
-make start BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=0 RZGATE=0
+# Full stack without HA
+make start level=full
 
-# Full stack (explicit)
-make start BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=1 RZGATE=1
+# Full stack with HA (2 bridges per shard, 2 zone routers per zone)
+make start level=full ha=true
+
+# Full stack with HA + RZGate
+make start level=full ha=true rzgate=true
 ```
 
 ## Scaling
 
 ```bash
 # Custom number of shards and zones
-make start SHARDS=3 ZONES=3
+make start SHARDS=3 ZONES=3 level=full
 
-# Minimal cluster (1 shard, 1 zone, no extra components)
-make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+# Minimal cluster (1 shard, 1 zone)
+make start SHARDS=1 ZONES=1
+```
+
+## HA Mode
+
+When `ha=true`:
+- 2 bridges per shard (instead of 1)
+- 2 zone routers per zone (instead of 1)
+- Edge router remains single instance
+
+```bash
+# Bridge HA testing
+make start level=bridge ha=true SHARDS=1 ZONES=1
+
+# Full stack HA
+make start level=full ha=true
 ```
 
 ## What Happens When You Run `make start`
@@ -112,6 +138,22 @@ Everything is automated. No manual steps required.
 | roomzin-1-0 | 7810 | 8010 |
 | roomzin-1-1 | 7811 | 8011 |
 | roomzin-1-2 | 7812 | 8012 |
+
+**HA Mode Ports (2 shards, 2 zones, ha=true):**
+
+| Bridge | Port |
+|--------|------|
+| bridge-0-0 | 9000 |
+| bridge-0-1 | 9001 |
+| bridge-1-0 | 9002 |
+| bridge-1-1 | 9003 |
+
+| Zone Router | Port |
+|-------------|------|
+| router-zone-0-0 | 9100 |
+| router-zone-0-1 | 9101 |
+| router-zone-1-0 | 9102 |
+| router-zone-1-1 | 9103 |
 
 ## Testing
 
@@ -165,7 +207,7 @@ For development of specific components, start only the required dependencies:
 ### Testing RzBridge
 
 ```bash
-make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+make start SHARDS=1 ZONES=1 level=bridge ha=false
 ```
 
 This starts:
@@ -180,26 +222,36 @@ Then run your local RzBridge binary connecting to:
 ### Testing RzRouter (Zone Router)
 
 ```bash
-make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0
+make start SHARDS=1 ZONES=1 level=zone
 ```
 
-This starts: cluster + Bridge. Run your local Zone Router.
+This starts: cluster + Bridges. Run your local Zone Router.
 
 ### Testing RzRouter (Edge Router)
 
 ```bash
-make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=0 RZGATE=0
+make start SHARDS=1 ZONES=1 level=edge
 ```
 
-This starts: cluster + Bridge + Zone Router. Run your local Edge Router.
+This starts: cluster + Bridges + Zone Routers. Run your local Edge Router.
 
 ### Testing RZGate
 
 ```bash
-make start SHARDS=1 ZONES=1 BRIDGE=1 ZONE_ROUTER=1 EDGE_ROUTER=1 RZGATE=0
+make start SHARDS=1 ZONES=1 level=full rzgate=false
 ```
 
 This starts: full stack without RZGate. Run your local RZGate.
+
+### Testing HA
+
+```bash
+# Test with 2 bridges per shard
+make start SHARDS=1 ZONES=1 level=bridge ha=true
+
+# Test with 2 zone routers per zone
+make start SHARDS=1 ZONES=1 level=zone ha=true
+```
 
 ## Docker Images
 
@@ -218,7 +270,7 @@ roomzin-quickstart/
 ├── quick-start.py           # Generator script
 ├── gen_data.py              # Test data generator
 ├── test_query.py            # Query test script
-├── rzpoint-echo.py          # RzPoint echo resolver
+├── rzpoint-echo.py          # RzPoint resolver
 ├── Makefile                 # Automation targets
 ├── certs/                   # Pre-generated TLS certificates
 ├── configs/                 # Configuration files
@@ -282,6 +334,7 @@ make clean
 2. **Data** is generated fresh on each `make start`
 3. **Snapshots** are built automatically from test data
 4. **All components** are stateless except Roomzin nodes (data persists until `make stop`)
+5. **RzPoint** resolves IDs to IPs for local development (returns IPs instead of hostnames)
 
 ## Related Repositories
 

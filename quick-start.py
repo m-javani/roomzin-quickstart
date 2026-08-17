@@ -4,7 +4,7 @@ Roomzin Quick-Start Generator
 
 Usage:
   python3 quick-start.py --shards 2 --zones 2
-  python3 quick-start.py --shards 3 --zones 3
+  python3 quick-start.py --level full --ha --rzgate
 """
 
 import argparse
@@ -14,10 +14,14 @@ import sys
 from pathlib import Path
 from string import Template
 
+
 # ---------- Topology Generation ----------
 
-def generate_topology(shards, zones):
+def generate_topology(shards, zones, ha=False):
     """Generate component allocation across zones"""
+    
+    bridge_count = 2 if ha else 1
+    zone_router_count = 2 if ha else 1
     
     if zones > shards:
         print(f"⚠️  Warning: zones ({zones}) > shards ({shards}). Some zones will have no shards.")
@@ -51,35 +55,41 @@ def generate_topology(shards, zones):
                 "role": "leader" if j == 0 else "follower"
             })
         
-        # 1 bridge per shard
-        bridge_id = f"bridge-{i}"
-        topology["bridges"].append({
-            "id": bridge_id,
-            "shard_id": shard_id,
-            "zone_id": zone_id,
-            "shard_index": i,
-        })
+        # Bridges per shard (1 or 2 based on HA)
+        for b in range(bridge_count):
+            bridge_id = f"bridge-{i}-{b}" if ha else f"bridge-{i}"
+            topology["bridges"].append({
+                "id": bridge_id,
+                "shard_id": shard_id,
+                "zone_id": zone_id,
+                "shard_index": i,
+                "bridge_index": b,
+            })
         
         topology["shards"].append({
             "id": shard_id,
             "zone_id": zone_id,
             "nodes": node_ids,
-            "bridge": bridge_id,
+            "bridges": [b for b in topology["bridges"] if b["shard_id"] == shard_id],
             "shard_index": i,
         })
     
-    # 1 zone router per zone
+    # Zone routers per zone (1 or 2 based on HA)
     for z in range(zones):
         zone_id = f"zone{z+1}"
-        router_id = f"router-zone-{z}"
-        topology["zone_routers"].append({
-            "id": router_id,
-            "zone_id": zone_id,
-            "zone_index": z,
-        })
+        zone_bridge_ids = [b["id"] for b in topology["bridges"] if b["zone_id"] == zone_id]
+        for r in range(zone_router_count):
+          router_id = f"router-zone-{z}-{r}" if ha else f"router-zone-{z}"
+          topology["zone_routers"].append({
+              "id": router_id,
+              "zone_id": zone_id,
+              "zone_index": z,
+              "router_index": r,
+              "bridge_ids": zone_bridge_ids,  # Store bridge dependencies
+          })
         topology["zones"].append({
             "id": zone_id,
-            "router": router_id,
+            "routers": [r for r in topology["zone_routers"] if r["zone_id"] == zone_id],
             "shards": [s["id"] for s in topology["shards"] if s["zone_id"] == zone_id],
             "zone_index": z,
         })
@@ -95,55 +105,85 @@ def generate_topology(shards, zones):
 
 # ---------- Port Allocation ----------
 
-def get_ports(component_type, shard_index=0, node_index=0, zone_index=0, edge_index=0):
+def get_ports(component_type, shard_index=0, node_index=0, zone_index=0, edge_index=0, bridge_index=0, router_index=0):
     """Get external ports for each component"""
     
     if component_type == "roomzin_tcp":
-        return f"78{shard_index}{node_index}"  # 7800, 7801, 7802, 7810, ...
+        return f"78{shard_index}{node_index}"
     elif component_type == "roomzin_api":
-        return f"80{shard_index}{node_index}"  # 8000, 8001, 8002, 8010, ...
+        return f"80{shard_index}{node_index}"
     elif component_type == "bridge":
-        return f"90{shard_index:02d}"  # 9000, 9001, 9002, ...
+        # bridge-0:9000, bridge-1:9001
+        # HA: bridge-0-0:9000, bridge-0-1:9001, bridge-1-0:9002, bridge-1-1:9003
+        return str(9000 + (shard_index * 2) + bridge_index)
     elif component_type == "zone_router":
-        return f"91{zone_index:02d}"  # 9100, 9101, 9102, ...
+        # router-zone-0:9100, router-zone-1:9101
+        # HA: router-zone-0-0:9100, router-zone-0-1:9101
+        return str(9100 + (zone_index * 2) + router_index)
     elif component_type == "edge_router":
-        return "9200"  # Always 9200 for single edge router
+        return "9200"
     else:
         return ""
-
 
 # ---------- IP Allocation ----------
 
 def get_ip(component_type, index):
     """Get IP address for each component"""
     base_ips = {
-        "roomzin": 10,      # 10 + (shard_index * 3 + node_index)
+        "roomzin": 10,
         "rzpoint": 40,
         "rzid": 41,
-        "bridge": 45,       # 45 + shard_index
-        "zone_router": 50,  # 50 + zone_index
-        "edge_router": 60,  # Always 60 for single edge router
+        "bridge": 45,
+        "zone_router": 50,
+        "edge_router": 60,
         "rzgate": 70,
     }
     return f"172.20.0.{base_ips[component_type] + index}"
 
+
 def build_resolver_mapping(topology):
-    """Build ID:IP mapping string for RzPoint"""
+    """Build ID:IP mapping string for RzPoint - everything in topology"""
     parts = []
+    
     for node in topology["nodes"]:
         ip = get_ip("roomzin", node["shard_index"] * 3 + node["node_index"])
         parts.append(f"{node['id']}:{ip}")
+    
+    for bridge in topology["bridges"]:
+        ip = get_ip("bridge", bridge["shard_index"])
+        parts.append(f"{bridge['id']}:{ip}")
+    
+    for router in topology["zone_routers"]:
+        ip = get_ip("zone_router", router["zone_index"])
+        parts.append(f"{router['id']}:{ip}")
+    
+    if topology["edge_router"]:
+        parts.append(f"{topology['edge_router']['id']}:172.20.0.60")
+    
     return ",".join(parts)
+
+
+# ---------- Level Configuration ----------
+
+def get_level_config(level):
+    """Return which components to include based on level"""
+    return {
+        "bridge": level in ["bridge", "zone", "edge", "full"],
+        "zone_router": level in ["zone", "edge", "full"],
+        "edge_router": level in ["edge", "full"],
+        "rzgate": level == "full",
+    }
+
 
 # ---------- Docker Compose Rendering ----------
 
 def render_docker_compose(topology, args):
     """Render docker-compose.yml from template"""
     
-    # Build service definitions
+    level_config = get_level_config(args.level)
     services = []
     
-    # Roomzin nodes (always generated)
+    # ---------- Roomzin nodes (always) ----------
     for node in topology["nodes"]:
         tcp_port = get_ports("roomzin_tcp", node["shard_index"], node["node_index"])
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
@@ -201,10 +241,10 @@ def render_docker_compose(topology, args):
         )
         services.append(service)
     
-    # Bridges (conditional)
-    if args.bridge == 1:
+    # ---------- Bridges ----------
+    if level_config["bridge"]:
         for bridge in topology["bridges"]:
-            port = get_ports("bridge", bridge["shard_index"])
+            port = get_ports("bridge", bridge["shard_index"], bridge_index=bridge.get("bridge_index", 0))
             ip = get_ip("bridge", bridge["shard_index"])
             
             shard_nodes = [n["id"] for n in topology["nodes"] if n["shard_id"] == bridge["shard_id"]]
@@ -247,59 +287,61 @@ ${depends}
             )
             services.append(service)
     
-    # Zone Routers (conditional)
-    if args.zone_router == 1:
-        for router in topology["zone_routers"]:
-            port = get_ports("zone_router", zone_index=router["zone_index"])
-            ip = get_ip("zone_router", router["zone_index"])
-            
-            # Depends on bridges in this zone (if bridges exist)
-            zone_bridges = [b["id"] for b in topology["bridges"] if b["zone_id"] == router["zone_id"]]
-            depends = "\n".join([f"      - {b}" for b in zone_bridges]) if zone_bridges and args.bridge == 1 else "      - rzid"
-            
-            service = Template("""
-  ${router_id}:
-    image: mehdyjavany/rzrouter:latest
-    container_name: ${router_id}
-    hostname: ${router_id}
-    networks:
-      roomzin-net:
-        ipv4_address: ${ip}
-    ports:
-      - "${port}:9000"
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,size=10M
-    command: >
-      /opt/rzrouter/rzrouter
-        --mode zone
-        --zone-id ${zone_id}
-        --router-id ${router_id}
-        --rzid-addr rzid:8080
-        --rzpoint-addr rzpoint:9090
-        --listen-host 0.0.0.0
-        --tcp-port 9000
-        --hop-tcp-port 9000
-    depends_on:
-      - rzid
-      - rzpoint
-${depends}
-""").substitute(
-                router_id=router["id"],
-                zone_id=router["zone_id"],
-                ip=ip,
-                port=port,
-                depends=depends,
-            )
-            services.append(service)
-    
-    # Edge Router (conditional)
-    if args.edge_router == 1:
+    # ---------- Zone Routers ----------
+    if level_config["zone_router"]:
+      for router in topology["zone_routers"]:
+          port = get_ports("zone_router", zone_index=router["zone_index"], router_index=router.get("router_index", 0))
+          ip = get_ip("zone_router", router["zone_index"])
+          
+          # Depends on bridges in this zone (use stored bridge_ids)
+          bridge_ids = router.get("bridge_ids", [])
+          if bridge_ids:
+              depends = "\n".join([f"      - {b}" for b in bridge_ids])
+          else:
+              depends = "      - rzid"
+          
+          service = Template("""
+    ${router_id}:
+      image: mehdyjavany/rzrouter:latest
+      container_name: ${router_id}
+      hostname: ${router_id}
+      networks:
+        roomzin-net:
+          ipv4_address: ${ip}
+      ports:
+        - "${port}:9000"
+      tmpfs:
+        - /tmp:rw,noexec,nosuid,size=10M
+      command: >
+        /opt/rzrouter/rzrouter
+          --mode zone
+          --zone-id ${zone_id}
+          --router-id ${router_id}
+          --rzid-addr rzid:8080
+          --rzpoint-addr rzpoint:9090
+          --listen-host 0.0.0.0
+          --tcp-port 9000
+          --hop-tcp-port 9000
+      depends_on:
+        - rzid
+        - rzpoint
+  ${depends}
+  """).substitute(
+              router_id=router["id"],
+              zone_id=router["zone_id"],
+              ip=ip,
+              port=port,
+              depends=depends,
+          )
+          services.append(service)
+
+    # ---------- Edge Router ----------
+    if level_config["edge_router"]:
         edge_router = topology["edge_router"]
         port = get_ports("edge_router")
         ip = get_ip("edge_router", 0)
         
-        # Depends on all zone routers (if they exist)
-        if args.zone_router == 1:
+        if level_config["zone_router"]:
             depends = "\n".join([f"      - {r['id']}" for r in topology["zone_routers"]])
         else:
             depends = "      - rzid"
@@ -335,9 +377,9 @@ ${depends}
     depends=depends,
 ))
     
-    # RzPoint (always generated)
+    # ---------- RzPoint (always) ----------
     mapping_str = build_resolver_mapping(topology)
-
+    
     services.append(Template("""
   rzpoint:
     image: python:3.11-slim
@@ -359,7 +401,7 @@ ${depends}
       - /tmp:rw,noexec,nosuid,size=10M
 """).substitute(mapping=mapping_str))
     
-    # RzID (always generated)
+    # ---------- RzID (always) ----------
     services.append("""
   rzid:
     image: mehdyjavany/rzid:latest
@@ -383,8 +425,8 @@ ${depends}
       - rzpoint
 """)
     
-    # RZGate (conditional)
-    if args.rzgate == 1 and args.edge_router == 1:
+    # ---------- RZGate ----------
+    if level_config["rzgate"] and level_config["edge_router"]:
         services.append("""
   rzgate:
     image: mehdyjavany/rzgate:latest
@@ -411,9 +453,8 @@ ${depends}
     depends_on:
       - router-edge
 """)
-    elif args.rzgate == 1 and args.edge_router == 0:
-        # RZGate without edge router doesn't make sense - warn user
-        print("⚠️  Warning: RZGate requires edge-router. Ignoring --rzgate 1")
+    elif level_config["rzgate"] and not level_config["edge_router"]:
+        print("⚠️  Warning: RZGate requires edge-router. Ignoring --rzgate")
     
     # Combine all services
     all_services = "".join(services)
@@ -430,22 +471,20 @@ networks:
     
     return compose
 
+
 # ---------- Main Script ----------
 
 def main():
     parser = argparse.ArgumentParser(description="Roomzin Quick-Start Generator")
     parser.add_argument("--shards", type=int, default=2, help="Number of shards (default: 2)")
     parser.add_argument("--zones", type=int, default=2, help="Number of zones (default: 2)")
-    parser.add_argument("--output", type=str, default="./generated", help="Output directory (default: ./generated)")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing output directory")
-    parser.add_argument("--bridge", type=int, default=1, choices=[0,1], 
-                    help="Include RzBridge (0 or 1, default: 1)")
-    parser.add_argument("--zone-router", type=int, default=1, choices=[0,1], 
-                        help="Include Zone Router (0 or 1, default: 1)")
-    parser.add_argument("--edge-router", type=int, default=1, choices=[0,1], 
-                        help="Include Edge Router (0 or 1, default: 1)")
-    parser.add_argument("--rzgate", type=int, default=1, choices=[0,1], 
-                        help="Include RZGate (0 or 1, default: 1)")
+    parser.add_argument("--level", type=str, default="cluster", 
+                        choices=["cluster", "bridge", "zone", "edge", "full"],
+                        help="Top level: cluster|bridge|zone|edge|full (default: cluster)")
+    parser.add_argument("--ha", action="store_true", help="Enable HA mode (2 instances per layer)")
+    parser.add_argument("--rzgate", action="store_true", help="Include RZGate (requires level=full)")
+    parser.add_argument("--output", type=str, default="./generated", help="Output directory")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing output")
     args = parser.parse_args()
     
     # Validate
@@ -455,6 +494,9 @@ def main():
     if args.zones < 1:
         print("❌ Error: --zones must be >= 1")
         sys.exit(1)
+    if args.rzgate and args.level != "full":
+        print("⚠️  Warning: RZGate requires level=full. Ignoring --rzgate")
+        args.rzgate = False
     
     # Check output directory
     output_dir = Path(args.output)
@@ -462,17 +504,27 @@ def main():
         print(f"❌ Error: Output directory '{output_dir}' exists. Use --force to overwrite.")
         sys.exit(1)
     
-    # Create output directory
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    level_names = {
+        "cluster": "Cluster (nodes + RzID + RzPoint)",
+        "bridge": "Bridge (cluster + bridges)",
+        "zone": "Zone (bridge + zone routers)",
+        "edge": "Edge (zone + edge router)",
+        "full": "Full (edge + RZGate)",
+    }
     
     print(f"🚀 Generating Roomzin test environment...")
     print(f"   Shards: {args.shards}")
     print(f"   Zones: {args.zones}")
+    print(f"   Level: {args.level} ({level_names[args.level]})")
+    print(f"   HA: {'Enabled' if args.ha else 'Disabled'}")
+    print(f"   RZGate: {'Enabled' if args.rzgate else 'Disabled'}")
     print(f"   Output: {output_dir}")
     print()
     
     # Generate topology
-    topology = generate_topology(args.shards, args.zones)
+    topology = generate_topology(args.shards, args.zones, args.ha)
     
     # Copy static files
     print("📁 Copying static files...")
@@ -490,6 +542,8 @@ def main():
     compose = render_docker_compose(topology, args)
     (output_dir / "docker-compose.yml").write_text(compose)
     
+    level_config = get_level_config(args.level)
+    
     print()
     print("✅ Generation complete!")
     print()
@@ -500,21 +554,20 @@ def main():
     print("   - RzID:    http://localhost:8081")
     print("   - RzPoint: http://localhost:9090")
     
-    # Show optional components based on flags
-    if args.bridge == 1:
+    if level_config["bridge"]:
         for bridge in topology["bridges"]:
-            port = get_ports("bridge", bridge["shard_index"])
+            port = get_ports("bridge", bridge["shard_index"], bridge_index=bridge.get("bridge_index", 0))
             print(f"   - {bridge['id']} (TCP): localhost:{port}")
     
-    if args.zone_router == 1:
+    if level_config["zone_router"]:
         for router in topology["zone_routers"]:
-            port = get_ports("zone_router", zone_index=router["zone_index"])
+            port = get_ports("zone_router", zone_index=router["zone_index"], router_index=router.get("router_index", 0))
             print(f"   - {router['id']} (TCP): localhost:{port}")
     
-    if args.edge_router == 1:
+    if level_config["edge_router"]:
         print("   - router-edge (TCP): localhost:9200")
     
-    if args.rzgate == 1 and args.edge_router == 1:
+    if level_config["rzgate"] and level_config["edge_router"]:
         print("   - RZGate:  http://localhost:8777")
     
     print()
@@ -524,8 +577,7 @@ def main():
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
         print(f"   - {node['id']} (TCP: {tcp_port}, API: {api_port})")
     
-    # Show example test command only if full stack is available
-    if args.rzgate == 1 and args.edge_router == 1:
+    if level_config["rzgate"] and level_config["edge_router"]:
         print()
         print("   Test with:")
         print('   curl -X POST http://localhost:8777/api -H "Content-Type: application/json" -d \'{"command":"GETSEGMENTS","segment":"","body":{}}\'')

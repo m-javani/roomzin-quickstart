@@ -3,10 +3,13 @@
 # Default values
 SHARDS ?= 2
 ZONES ?= 2
-BRIDGE ?= 1
-ZONE_ROUTER ?= 1
-EDGE_ROUTER ?= 1
-RZGATE ?= 1
+LEVEL ?= cluster
+HA ?= false
+RZGATE ?= false
+
+# Convert boolean to flags
+HA_FLAG = $(if $(filter true,$(HA)),--ha,)
+RZGATE_FLAG = $(if $(filter true,$(RZGATE)),--rzgate,)
 
 # Colors
 GREEN := \033[0;32m
@@ -41,9 +44,8 @@ start:
 	@echo "$(BLUE)🚀 Starting Roomzin environment...$(NC)"
 	@echo "   Shards: $(SHARDS)"
 	@echo "   Zones: $(ZONES)"
-	@echo "   Bridge: $(BRIDGE)"
-	@echo "   Zone Router: $(ZONE_ROUTER)"
-	@echo "   Edge Router: $(EDGE_ROUTER)"
+	@echo "   Level: $(LEVEL)"
+	@echo "   HA: $(HA)"
 	@echo "   RZGate: $(RZGATE)"
 	@echo ""
 	@echo "$(BLUE)📄 Generating test data...$(NC)"
@@ -51,10 +53,8 @@ start:
 	@echo "$(GREEN)✅ CSV data generated$(NC)"
 	@echo ""
 	@echo "$(BLUE)📦 Building snapshots...$(NC)"
-	@# Generate docker-compose first (so data dirs exist)
-	@python3 quick-start.py --shards $(SHARDS) --zones $(ZONES) \
-		--bridge $(BRIDGE) --zone-router $(ZONE_ROUTER) \
-		--edge-router $(EDGE_ROUTER) --rzgate $(RZGATE) --force
+	@python3 quick-start.py --shards $(SHARDS) --zones $(ZONES) --level $(LEVEL) $(HA_FLAG) $(RZGATE_FLAG) --force
+	@echo ""
 	@# For each shard directory in test-data/
 	@for shard_dir in test-data/shard*/; do \
 		shard_id=$$(basename $$shard_dir); \
@@ -95,21 +95,22 @@ start:
 	@echo "  $(BLUE)Service endpoints:$(NC)"
 	@echo "    RzID:    http://localhost:8081"
 	@echo "    RzPoint: http://localhost:9090"
-	@if [ $(BRIDGE) -eq 1 ]; then \
-		echo "    Bridge:  localhost:9000 (shard1), localhost:9001 (shard2)"; \
+	@if [ $(LEVEL) = "bridge" ] || [ $(LEVEL) = "zone" ] || [ $(LEVEL) = "edge" ] || [ $(LEVEL) = "full" ]; then \
+		echo "    Bridge:  localhost:9000"; \
 	fi
-	@if [ $(ZONE_ROUTER) -eq 1 ]; then \
-		echo "    Zone Router: localhost:9100 (zone1), localhost:9101 (zone2)"; \
+	@if [ $(LEVEL) = "zone" ] || [ $(LEVEL) = "edge" ] || [ $(LEVEL) = "full" ]; then \
+		echo "    Zone Router: localhost:9100"; \
 	fi
-	@if [ $(EDGE_ROUTER) -eq 1 ]; then \
+	@if [ $(LEVEL) = "edge" ] || [ $(LEVEL) = "full" ]; then \
 		echo "    Edge Router (TCP): localhost:9200"; \
 	fi
-	@if [ $(RZGATE) -eq 1 ] && [ $(EDGE_ROUTER) -eq 1 ]; then \
+	@if [ $(LEVEL) = "full" ] && [ $(RZGATE) = "true" ]; then \
 		echo "    RZGate:  http://localhost:8777"; \
 	fi
 	@echo ""
 	@echo "  $(BLUE)Test with: make test-query$(NC)"
 
+	
 stop:
 	@echo "$(YELLOW)🛑 Stopping and cleaning up...$(NC)"
 	@cd generated && docker compose kill && docker compose down -v --remove-orphans 2>/dev/null || true
