@@ -4,7 +4,7 @@ Roomzin Quick-Start Generator
 
 Usage:
   python3 quick-start.py --shards 2 --zones 2
-  python3 quick-start.py --level full --ha --rzgate
+  python3 quick-start.py --level full --ha --rzproxy
 """
 
 import argparse
@@ -136,7 +136,7 @@ def get_ip(component_type, index):
         "bridge": 45,
         "zone_router": 50,
         "edge_router": 60,
-        "rzgate": 70,
+        "rzproxy": 70,
     }
     return f"172.20.0.{base_ips[component_type] + index}"
 
@@ -171,7 +171,7 @@ def get_level_config(level):
         "bridge": level in ["bridge", "zone", "edge", "full"],
         "zone_router": level in ["zone", "edge", "full"],
         "edge_router": level in ["edge", "full"],
-        "rzgate": level == "full",
+        "rzproxy": level == "full",
     }
 
 
@@ -426,13 +426,13 @@ ${depends}
       - rzpoint
 """)
     
-    # ---------- RZGate ----------
-    if level_config["rzgate"] and level_config["edge_router"]:
+    # ---------- RZProxy ----------
+    if level_config["rzproxy"] and level_config["edge_router"]:
         services.append("""
-  rzgate:
-    image: mehdyjavany/rzgate:latest
-    container_name: rzgate
-    hostname: rzgate
+  rzproxy:
+    image: mehdyjavany/rzproxy:latest
+    container_name: rzproxy
+    hostname: rzproxy
     networks:
       roomzin-net:
         ipv4_address: 172.20.0.70
@@ -441,7 +441,7 @@ ${depends}
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=10M
     command: >
-      /opt/rzgate/rzgate
+      /opt/rzproxy/rzproxy
         --mode router
         --roomzin-addr router-edge
         --roomzin-port 9000
@@ -454,8 +454,8 @@ ${depends}
     depends_on:
       - router-edge
 """)
-    elif level_config["rzgate"] and not level_config["edge_router"]:
-        print("⚠️  Warning: RZGate requires edge-router. Ignoring --rzgate")
+    elif level_config["rzproxy"] and not level_config["edge_router"]:
+        print("⚠️  Warning: RZProxy requires edge-router. Ignoring --rzproxy")
     
     # Combine all services
     all_services = "".join(services)
@@ -483,7 +483,7 @@ def main():
                         choices=["cluster", "bridge", "zone", "edge", "full"],
                         help="Top level: cluster|bridge|zone|edge|full (default: cluster)")
     parser.add_argument("--ha", action="store_true", help="Enable HA mode (2 instances per layer)")
-    parser.add_argument("--rzgate", action="store_true", help="Include RZGate (requires level=full)")
+    parser.add_argument("--rzproxy", action="store_true", help="Include RZProxy (requires level=full)")
     parser.add_argument("--output", type=str, default="./generated", help="Output directory")
     parser.add_argument("--force", action="store_true", help="Overwrite existing output")
     args = parser.parse_args()
@@ -495,9 +495,9 @@ def main():
     if args.zones < 1:
         print("❌ Error: --zones must be >= 1")
         sys.exit(1)
-    if args.rzgate and args.level != "full":
-        print("⚠️  Warning: RZGate requires level=full. Ignoring --rzgate")
-        args.rzgate = False
+    if args.rzproxy and args.level != "full":
+        print("⚠️  Warning: RZProxy requires level=full. Ignoring --rzproxy")
+        args.rzproxy = False
     
     # Check output directory
     output_dir = Path(args.output)
@@ -512,7 +512,7 @@ def main():
         "bridge": "Bridge (cluster + bridges)",
         "zone": "Zone (bridge + zone routers)",
         "edge": "Edge (zone + edge router)",
-        "full": "Full (edge + RZGate)",
+        "full": "Full (edge + RZProxy)",
     }
     
     print(f"🚀 Generating Roomzin test environment...")
@@ -520,7 +520,7 @@ def main():
     print(f"   Zones: {args.zones}")
     print(f"   Level: {args.level} ({level_names[args.level]})")
     print(f"   HA: {'Enabled' if args.ha else 'Disabled'}")
-    print(f"   RZGate: {'Enabled' if args.rzgate else 'Disabled'}")
+    print(f"   RZProxy: {'Enabled' if args.rzproxy else 'Disabled'}")
     print(f"   Output: {output_dir}")
     print()
     
@@ -568,8 +568,8 @@ def main():
     if level_config["edge_router"]:
         print("   - router-edge (TCP): localhost:9200")
     
-    if level_config["rzgate"] and level_config["edge_router"]:
-        print("   - RZGate:  http://localhost:8777")
+    if level_config["rzproxy"] and level_config["edge_router"]:
+        print("   - RZProxy:  http://localhost:8777")
     
     print()
     print(f"   Roomzin nodes ({args.shards} shards × 3 nodes):")
@@ -578,7 +578,7 @@ def main():
         api_port = get_ports("roomzin_api", node["shard_index"], node["node_index"])
         print(f"   - {node['id']} (TCP: {tcp_port}, API: {api_port})")
     
-    if level_config["rzgate"] and level_config["edge_router"]:
+    if level_config["rzproxy"] and level_config["edge_router"]:
         print()
         print("   Test with:")
         print('   curl -X POST http://localhost:8777/api -H "Content-Type: application/json" -d \'{"command":"GETSEGMENTS","segment":"","body":{}}\'')

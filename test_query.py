@@ -14,7 +14,7 @@ import urllib.request
 from datetime import datetime, timedelta
 
 def send_query(host, port, command, segment, body):
-    """Send a query to RZGate and return the response"""
+    """Send a query to RZProxy and return the response"""
     
     url = f"http://{host}:{port}/api"
     
@@ -40,8 +40,8 @@ def send_query(host, port, command, segment, body):
 
 def main():
     parser = argparse.ArgumentParser(description="Test queries for Roomzin")
-    parser.add_argument("--host", default="localhost", help="RZGate host (default: localhost)")
-    parser.add_argument("--port", type=int, default=8777, help="RZGate port (default: 8777)")
+    parser.add_argument("--host", default="localhost", help="RZProxy host (default: localhost)")
+    parser.add_argument("--port", type=int, default=8777, help="RZProxy port (default: 8777)")
     args = parser.parse_args()
     
     # Get today's date and tomorrow
@@ -49,7 +49,7 @@ def main():
     date1 = today.strftime("%Y-%m-%d")
     date2 = (today + timedelta(days=1)).strftime("%Y-%m-%d")
     
-    print(f"🧪 Testing RZGate at {args.host}:{args.port}")
+    print(f"🧪 Testing RZProxy at {args.host}:{args.port}")
     print()
     
     # Test 1: SEARCHPROP on segment_1

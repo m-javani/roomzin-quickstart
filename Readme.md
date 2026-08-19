@@ -51,7 +51,7 @@ Control which components are started using `level`:
 | `bridge` | cluster + Bridges |
 | `zone` | bridge + Zone Routers |
 | `edge` | zone + Edge Router |
-| `full` | edge + RZGate |
+| `full` | edge + RZProxy |
 
 ```bash
 # Just cluster (default)
@@ -66,17 +66,17 @@ make start level=zone
 # Cluster + Bridges + Zone Routers + Edge Router (for edge router testing)
 make start level=edge
 
-# Full stack without RZGate
+# Full stack without RZProxy
 make start level=full
 
-# Full stack with RZGate
-make start level=full rzgate=true
+# Full stack with RZProxy
+make start level=full rzproxy=true
 
 # Full stack with HA (2 bridges per shard, 2 zone routers per zone)
 make start level=full ha=true
 
-# Full stack with HA + RZGate
-make start level=full ha=true rzgate=true
+# Full stack with HA + RZProxy
+make start level=full ha=true rzproxy=true
 ```
 
 ## Scaling
@@ -121,7 +121,7 @@ Everything is automated. No manual steps required.
 | `make health` | Check cluster health |
 | `make logs` | View all container logs |
 | `make logs-<service>` | View specific service logs |
-| `make test-query` | Run test queries via RZGate |
+| `make test-query` | Run test queries via RZProxy |
 | `make clean` | Remove generated directory and test data |
 | `make help` | Show available commands |
 
@@ -129,7 +129,7 @@ Everything is automated. No manual steps required.
 
 | Component | Address | Port |
 |-----------|---------|------|
-| RZGate HTTP | `http://localhost` | 8777 |
+| RZProxy HTTP | `http://localhost` | 8777 |
 | RzID HTTP | `http://localhost` | 8081 |
 | RzPoint HTTP | `http://localhost` | 9090 |
 | Edge Router (TCP) | `localhost` | 9200 |
@@ -242,13 +242,13 @@ make start SHARDS=1 ZONES=1 level=edge
 
 This starts: cluster + Bridges + Zone Routers + Edge Router. Run your local Edge Router.
 
-### Testing RZGate
+### Testing RZProxy
 
 ```bash
-make start SHARDS=1 ZONES=1 level=edge rzgate=false
+make start SHARDS=1 ZONES=1 level=edge rzproxy=false
 ```
 
-This starts: full stack without RZGate. Run your local RZGate.
+This starts: full stack without RZProxy. Run your local RZProxy.
 
 ### Testing HA
 
@@ -275,7 +275,7 @@ make start SHARDS=1 ZONES=1 LEVEL=zone
 # Cluster + Bridges + Zone Routers + Edge Router
 make start SHARDS=1 ZONES=1 LEVEL=edge
 
-# Full stack (includes RZGate)
+# Full stack (includes RZProxy)
 make start SHARDS=1 ZONES=1 LEVEL=full RZGATE=true
 
 # Full stack with HA
@@ -290,7 +290,7 @@ This quickstart pulls pre-built images from Docker Hub:
 - [`mehdyjavany/rzid:latest`](https://hub.docker.com/r/mehdyjavany/rzid) - Control plane
 - [`mehdyjavany/rzbridge:latest`](https://hub.docker.com/r/mehdyjavany/rzbridge) - Bridge proxy
 - [`mehdyjavany/rzrouter:latest`](https://hub.docker.com/r/mehdyjavany/rzrouter) - Router
-- [`mehdyjavany/rzgate:latest`](https://hub.docker.com/r/mehdyjavany/rzgate) - HTTP/JSON proxy
+- [`mehdyjavany/rzproxy:latest`](https://hub.docker.com/r/mehdyjavany/rzproxy) - HTTP/JSON proxy
 
 ## Directory Structure
 
@@ -319,7 +319,7 @@ docker pull mehdyjavany/roomzin:latest
 docker pull mehdyjavany/rzid:latest
 docker pull mehdyjavany/rzbridge:latest
 docker pull mehdyjavany/rzrouter:latest
-docker pull mehdyjavany/rzgate:latest
+docker pull mehdyjavany/rzproxy:latest
 make stop && make start
 ```
 
@@ -368,7 +368,7 @@ make clean
 ## Related Repositories
 
 - [Roomzin](https://github.com/m-javani/roomzin) - Main repository
-- [RzGate](https://github.com/m-javani/rzgate) - HTTP/JSON proxy
+- [RzProxy](https://github.com/m-javani/rzproxy) - HTTP/JSON proxy
 - [RzID](https://github.com/m-javani/rzid) - Control plane
 - [RzBridge](https://github.com/m-javani/rzbridge) - Bridge proxy
 - [RzRouter](https://github.com/m-javani/rzrouter) - Router

@@ -9,7 +9,7 @@ RZGATE ?= false
 
 # Convert boolean to flags
 HA_FLAG = $(if $(filter true,$(HA)),--ha,)
-RZGATE_FLAG = $(if $(filter true,$(RZGATE)),--rzgate,)
+RZGATE_FLAG = $(if $(filter true,$(RZGATE)),--rzproxy,)
 
 # Colors
 GREEN := \033[0;32m
@@ -27,7 +27,7 @@ help:
 	@echo "  make start ZONES=3   - Start with 3 zones"
 	@echo "  make start BRIDGE=0  - Start without RzBridge"
 	@echo "  make stop            - Stop and clean up everything"
-	@echo "  make test-query      - Run test queries via RZGate"
+	@echo "  make test-query      - Run test queries via RZProxy"
 	@echo "  make health          - Check cluster health"
 	@echo "  make logs            - View all logs"
 	@echo "  make logs-<service>  - View specific service logs"
@@ -46,7 +46,7 @@ start:
 	@echo "   Zones: $(ZONES)"
 	@echo "   Level: $(LEVEL)"
 	@echo "   HA: $(HA)"
-	@echo "   RZGate: $(RZGATE)"
+	@echo "   RZProxy: $(RZGATE)"
 	@echo ""
 	@echo "$(BLUE)📄 Generating test data...$(NC)"
 	@python3 gen_data.py --shards $(SHARDS) --force
@@ -105,7 +105,7 @@ start:
 		echo "    Edge Router (TCP): localhost:9200"; \
 	fi
 	@if [ $(LEVEL) = "full" ] && [ $(RZGATE) = "true" ]; then \
-		echo "    RZGate:  http://localhost:8777"; \
+		echo "    RZProxy:  http://localhost:8777"; \
 	fi
 	@echo ""
 	@echo "  $(BLUE)Test with: make test-query$(NC)"
@@ -119,7 +119,7 @@ stop:
 	@echo "$(GREEN)✅ Stopped and cleaned$(NC)"
 
 test-query:
-	@echo "$(BLUE)🔍 Running test queries via RZGate...$(NC)"
+	@echo "$(BLUE)🔍 Running test queries via RZProxy...$(NC)"
 	@echo ""
 	@python3 test_query.py
 	@echo ""
@@ -156,9 +156,9 @@ health:
 	fi
 	@if [ $(RZGATE) -eq 1 ] && [ $(EDGE_ROUTER) -eq 1 ]; then \
 		if curl -s -o /dev/null -w "%{http_code}" http://localhost:8777/health 2>/dev/null | grep -q "200"; then \
-			echo "    $(GREEN)✅ RZGate: running$(NC)"; \
+			echo "    $(GREEN)✅ RZProxy: running$(NC)"; \
 		else \
-			echo "    $(RED)❌ RZGate: not responding (check logs)$(NC)"; \
+			echo "    $(RED)❌ RZProxy: not responding (check logs)$(NC)"; \
 		fi \
 	fi
 	@echo ""
