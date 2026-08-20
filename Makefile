@@ -1,4 +1,4 @@
-.PHONY: start stop test-query logs health clean help
+.PHONY: start stop logs health clean help
 
 # Default values
 SHARDS ?= 2
@@ -28,7 +28,6 @@ help:
 	@echo "  make start ZONES=3   - Start with 3 zones"
 	@echo "  make start BRIDGE=0  - Start without RzBridge"
 	@echo "  make stop            - Stop and clean up everything"
-	@echo "  make test-query      - Run test queries via RZProxy"
 	@echo "  make health          - Check cluster health"
 	@echo "  make logs            - View all logs"
 	@echo "  make logs-<service>  - View specific service logs"
@@ -119,8 +118,6 @@ start:
 		echo "    RZProxy:  http://localhost:8777"; \
 	fi
 	@echo ""
-	@echo "  $(BLUE)Test with: make test-query$(NC)"
-
 	
 stop:
 	@echo "$(YELLOW)🛑 Stopping and cleaning up...$(NC)"
@@ -128,12 +125,7 @@ stop:
 	@sudo rm -rf generated
 	@sudo rm -rf test-data
 	@echo "$(GREEN)✅ Stopped and cleaned$(NC)"
-
-test-query:
-	@echo "$(BLUE)🔍 Running test queries via RZProxy...$(NC)"
-	@echo ""
-	@python3 test_query.py
-	@echo ""
+"
 
 health:
 	@echo "$(BLUE)🔍 Detailed health check...$(NC)"
