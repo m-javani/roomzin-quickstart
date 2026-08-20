@@ -194,7 +194,7 @@ def render_docker_compose(topology, args):
         
         service = Template("""
   ${node_id}:
-    image: mehdyjavany/roomzin:latest
+    image: roomzin:local
     container_name: ${node_id}
     hostname: ${node_id}
     networks:
@@ -252,7 +252,7 @@ def render_docker_compose(topology, args):
             
             service = Template("""
   ${bridge_id}:
-    image: mehdyjavany/rzbridge:latest
+    image: rzbridge:local
     container_name: ${bridge_id}
     hostname: ${bridge_id}
     networks:
@@ -302,7 +302,7 @@ ${depends}
           
           service = Template("""
   ${router_id}:
-      image: mehdyjavany/rzrouter:latest
+      image: rzrouter:local
       container_name: ${router_id}
       hostname: ${router_id}
       networks:
@@ -348,7 +348,7 @@ ${depends}
         
         service = Template("""
   ${router_id}:
-    image: mehdyjavany/rzrouter:latest
+    image: rzrouter:local
     container_name: ${router_id}
     hostname: ${router_id}
     networks:
@@ -405,7 +405,7 @@ ${depends}
     # ---------- RzID (always) ----------
     services.append("""
   rzid:
-    image: mehdyjavany/rzid:latest
+    image: rzid:local
     container_name: rzid
     hostname: rzid
     networks:
@@ -430,7 +430,7 @@ ${depends}
     if level_config["rzproxy"] and level_config["edge_router"]:
         services.append("""
   rzproxy:
-    image: mehdyjavany/rzproxy:latest
+    image: rzproxy:local
     container_name: rzproxy
     hostname: rzproxy
     networks:

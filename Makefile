@@ -5,11 +5,11 @@ SHARDS ?= 2
 ZONES ?= 2
 LEVEL ?= cluster
 HA ?= false
-RZGATE ?= false
+RZPROXY ?= false
 
 # Convert boolean to flags
 HA_FLAG = $(if $(filter true,$(HA)),--ha,)
-RZGATE_FLAG = $(if $(filter true,$(RZGATE)),--rzproxy,)
+RZPROXY_FLAG = $(if $(filter true,$(RZPROXY)),--rzproxy,)
 
 # Colors
 GREEN := \033[0;32m
@@ -22,6 +22,7 @@ help:
 	@echo "$(BLUE)Roomzin Quick-Start$(NC)"
 	@echo ""
 	@echo "Usage:"
+	@echo "  make build-images    - Download binaries and build local Docker images"
 	@echo "  make start           - Generate data, build snapshots, and start the environment"
 	@echo "  make start SHARDS=3  - Start with 3 shards"
 	@echo "  make start ZONES=3   - Start with 3 zones"
@@ -36,9 +37,19 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make start"
-	@echo "  make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0"
-	@echo "  make start BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZGATE=0"
+	@echo "  make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZPROXY=0"
+	@echo "  make start BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZPROXY=0"
 	@echo "  make logs-roomzin-0-0"
+
+download:
+	@echo "$(BLUE)📦 Downloading binaries...$(NC)"
+	@./download.sh
+	@echo "$(GREEN)✅ Binaries downloaded$(NC)"
+
+build:
+	@echo "$(BLUE)📦 Building local Docker images...$(NC)"
+	@./build.sh
+	@echo "$(GREEN)✅ Local images built$(NC)"
 
 start:
 	@echo "$(BLUE)🚀 Starting Roomzin environment...$(NC)"
@@ -46,14 +57,14 @@ start:
 	@echo "   Zones: $(ZONES)"
 	@echo "   Level: $(LEVEL)"
 	@echo "   HA: $(HA)"
-	@echo "   RZProxy: $(RZGATE)"
+	@echo "   RZProxy: $(RZPROXY)"
 	@echo ""
 	@echo "$(BLUE)📄 Generating test data...$(NC)"
 	@python3 gen_data.py --shards $(SHARDS) --force
 	@echo "$(GREEN)✅ CSV data generated$(NC)"
 	@echo ""
 	@echo "$(BLUE)📦 Building snapshots...$(NC)"
-	@python3 quick-start.py --shards $(SHARDS) --zones $(ZONES) --level $(LEVEL) $(HA_FLAG) $(RZGATE_FLAG) --force
+	@python3 quick-start.py --shards $(SHARDS) --zones $(ZONES) --level $(LEVEL) $(HA_FLAG) $(RZPROXY_FLAG) --force
 	@echo ""
 	@# For each shard directory in test-data/
 	@for shard_dir in test-data/shard*/; do \
@@ -65,7 +76,7 @@ start:
 		docker run --rm \
 			-v $$(pwd)/test-data:/opt/test-data:ro \
 			-v $$(pwd)/generated/temp-snapshots:/opt/snapshots \
-			mehdyjavany/roomzin:latest \
+			roomzin:local \
 			/opt/roomzin/roomzin build-snapshot \
 				--shard-id $$shard_id \
 				--input-path /opt/test-data/$$shard_id \
@@ -104,7 +115,7 @@ start:
 	@if [ $(LEVEL) = "edge" ] || [ $(LEVEL) = "full" ]; then \
 		echo "    Edge Router (TCP): localhost:9200"; \
 	fi
-	@if [ $(LEVEL) = "full" ] && [ $(RZGATE) = "true" ]; then \
+	@if [ $(LEVEL) = "full" ] && [ $(RZPROXY) = "true" ]; then \
 		echo "    RZProxy:  http://localhost:8777"; \
 	fi
 	@echo ""
@@ -154,7 +165,7 @@ health:
 	else \
 		echo "    $(RED)❌ RzPoint: not responding$(NC)"; \
 	fi
-	@if [ $(RZGATE) -eq 1 ] && [ $(EDGE_ROUTER) -eq 1 ]; then \
+	@if [ $(RZPROXY) -eq 1 ] && [ $(EDGE_ROUTER) -eq 1 ]; then \
 		if curl -s -o /dev/null -w "%{http_code}" http://localhost:8777/health 2>/dev/null | grep -q "200"; then \
 			echo "    $(GREEN)✅ RZProxy: running$(NC)"; \
 		else \

@@ -28,6 +28,12 @@ A complete Roomzin test environment with configurable components for local devel
 git clone https://github.com/m-javani/roomzin-quickstart
 cd roomzin-quickstart
 
+# download all needed binaries
+make download
+
+# build local docker images
+make build
+
 # Start the full stack (2 shards, 2 zones, all components)
 make start
 
@@ -54,6 +60,11 @@ Control which components are started using `level`:
 | `full` | edge + RZProxy |
 
 ```bash
+# if not done yet
+# download all needed binaries / build local docker images
+make download
+make build
+
 # Just cluster (default)
 make start
 
@@ -116,6 +127,8 @@ Everything is automated. No manual steps required.
 
 | Command | Description |
 |---------|-------------|
+| `make download` | Download all binaries: roomzin, rzbridge, rzrouter, rzproxy, rzid |
+| `make build` | Builds local docker images from binaries|
 | `make start` | Generate data, build snapshots, and start the environment |
 | `make stop` | Stop everything and clean up all generated files |
 | `make health` | Check cluster health |
@@ -276,21 +289,29 @@ make start SHARDS=1 ZONES=1 LEVEL=zone
 make start SHARDS=1 ZONES=1 LEVEL=edge
 
 # Full stack (includes RZProxy)
-make start SHARDS=1 ZONES=1 LEVEL=full RZGATE=true
+make start SHARDS=1 ZONES=1 LEVEL=full RZPROXY=true
 
 # Full stack with HA
-make start SHARDS=1 ZONES=1 LEVEL=full HA=true RZGATE=true
+make start SHARDS=1 ZONES=1 LEVEL=full HA=true RZPROXY=true
 ```
 
 ## Docker Images
 
-This quickstart pulls pre-built images from Docker Hub:
+This quickstart builds local Docker images from downloaded binaries:
 
-- [`mehdyjavany/roomzin:latest`](https://hub.docker.com/r/mehdyjavany/roomzin) - Roomzin node
-- [`mehdyjavany/rzid:latest`](https://hub.docker.com/r/mehdyjavany/rzid) - Control plane
-- [`mehdyjavany/rzbridge:latest`](https://hub.docker.com/r/mehdyjavany/rzbridge) - Bridge proxy
-- [`mehdyjavany/rzrouter:latest`](https://hub.docker.com/r/mehdyjavany/rzrouter) - Router
-- [`mehdyjavany/rzproxy:latest`](https://hub.docker.com/r/mehdyjavany/rzproxy) - HTTP/JSON proxy
+- `roomzin:local` - Roomzin node (ports 7777, 8080)
+- `rzid:local` - Control plane (port 8080)
+- `rzbridge:local` - Bridge proxy (ports 9000, 9100)
+- `rzrouter:local` - Router (ports 9000, 9100)
+- `rzproxy:local` - HTTP/JSON proxy (port 8777)
+
+Images are built using Dockerfiles in the `bin/` directory:
+- `bin/Dockerfile.roomzin`
+- `bin/Dockerfile.rzid`
+- `bin/Dockerfile.rzbridge`
+- `bin/Dockerfile.rzrouter`
+- `bin/Dockerfile.rzproxy`
+
 
 ## Directory Structure
 
@@ -300,27 +321,20 @@ roomzin-quickstart/
 ├── gen_data.py              # Test data generator
 ├── test_query.py            # Query test script
 ├── rzpoint-echo.py          # RzPoint resolver
+├── download.sh              # Binary downloader
+├── build.sh                 # Docker image builder
 ├── Makefile                 # Automation targets
-├── certs/                   # Pre-generated TLS certificates
-├── configs/                 # Configuration files
-│   ├── roomzin.yml
-│   └── codecs.yml
-└── generated/               # Generated at runtime
-    ├── docker-compose.yml
-    ├── data/                # Per-node data with snapshots
-    ├── certs/
-    └── configs/
-```
-
-## Updating Images
-
-```bash
-docker pull mehdyjavany/roomzin:latest
-docker pull mehdyjavany/rzid:latest
-docker pull mehdyjavany/rzbridge:latest
-docker pull mehdyjavany/rzrouter:latest
-docker pull mehdyjavany/rzproxy:latest
-make stop && make start
+├── bin/                     # Downloaded binaries and Dockerfiles
+│   ├── roomzin
+│   ├── rzbridge
+│   ├── rzrouter
+│   ├── rzid
+│   ├── rzproxy
+│   ├── Dockerfile.roomzin
+│   ├── Dockerfile.rzbridge
+│   ├── Dockerfile.rzrouter
+│   ├── Dockerfile.rzid
+│   └── Dockerfile.rzproxy
 ```
 
 ## Troubleshooting
@@ -332,20 +346,6 @@ make logs
 # Or specific service
 make logs-roomzin-0-0
 ```
-
-### Nodes not forming cluster
-
-```bash
-make health
-```
-
-### Port conflicts
-
-Modify port mappings in `generated/docker-compose.yml` or stop services using those ports.
-
-### Slow shutdown
-
-`make stop` uses immediate shutdown (`docker compose kill`). Should be fast.
 
 ## Clean Up
 
