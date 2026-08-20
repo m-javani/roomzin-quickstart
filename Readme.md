@@ -134,7 +134,6 @@ Everything is automated. No manual steps required.
 | `make health` | Check cluster health |
 | `make logs` | View all container logs |
 | `make logs-<service>` | View specific service logs |
-| `make test-query` | Run test queries via RZProxy |
 | `make clean` | Remove generated directory and test data |
 | `make help` | Show available commands |
 
@@ -180,43 +179,6 @@ Everything is automated. No manual steps required.
 
 ```bash
 make health
-```
-
-### Test Queries
-
-```bash
-make test-query
-```
-
-Or send manual requests:
-
-```bash
-# Search properties
-curl -X POST http://localhost:8777/api \
-  -H "Content-Type: application/json" \
-  -d '{
-    "command": "SEARCHPROP",
-    "segment": "segment_1",
-    "body": {
-      "segment": "segment_1",
-      "limit": 1
-    }
-  }'
-
-# Search availability
-curl -X POST http://localhost:8777/api \
-  -H "Content-Type: application/json" \
-  -d '{
-    "command": "SEARCHAVAIL",
-    "segment": "segment_1",
-    "body": {
-      "segment": "segment_1",
-      "room_type": "room1",
-      "type": "hotel",
-      "date": ["2026-08-14"],
-      "limit": 1
-    }
-  }'
 ```
 
 ## Testing Individual Components
@@ -319,7 +281,6 @@ Images are built using Dockerfiles in the `bin/` directory:
 roomzin-quickstart/
 ├── quick-start.py           # Generator script
 ├── gen_data.py              # Test data generator
-├── test_query.py            # Query test script
 ├── rzpoint-echo.py          # RzPoint resolver
 ├── download.sh              # Binary downloader
 ├── build.sh                 # Docker image builder
