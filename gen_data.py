@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import csv
+import json
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -133,9 +134,84 @@ def generate_shard_data(shard_idx, num_segments, props_per_seg, room_types, days
     
     properties = generate_properties(shard_idx, segments, props_per_seg, shard_dir)
     packages = generate_packages(properties, room_types, days, shard_dir)
+
+    if shard_idx == 1:
+        generate_sample_queries(
+            properties, 
+            packages, 
+            days, 
+            output_dir.parent
+            )
     
     return shard_id, len(properties), len(packages)
 
+def generate_sample_queries(properties, packages, days, output_dir):
+    """Generate matching sample queries"""
+    
+    queries_dir = output_dir / "sample-queries"
+    queries_dir.mkdir(exist_ok=True)
+    
+    # Get first property
+    prop = properties[0]
+    prop_id = prop["PropertyID"]
+    segment = prop["Segment"]
+    
+    # Get first room type from packages for this property
+    # Find first package for this property
+    first_pkg = next((p for p in packages if p["PropertyID"] == prop_id), None)
+    if not first_pkg:
+        print("⚠️  Warning: No packages found for first property")
+        return
+    
+    room_type = first_pkg["RoomType"]
+    date_str = first_pkg["Date"]
+    price = first_pkg["FinalPrice"]
+    
+    # Write query files
+    queries = {
+        "01-setprop.json": {
+            "command": "SETPROP",
+            "segment": segment,
+            "body": {
+                "property_id": prop_id,
+                "area": prop["Area"],
+                "property_type": prop["PropertyType"],
+                "category": prop["Category"],
+                "stars": int(prop["Stars"]),
+                "latitude": float(prop["Latitude"]),
+                "longitude": float(prop["Longitude"]),
+                "amenities": prop["Amenities"].split("|")
+            }
+        },
+        "02-setroompkg.json": {
+            "command": "SETROOMPKG",
+            "segment": segment,
+            "body": {
+                "property_id": prop_id,
+                "room_type": room_type,
+                "date": date_str,
+                "availability": 15,
+                "final_price": 150,
+                "rate_features": ["free_cancellation", "free_wifi"]
+            }
+        },
+        "03-search.json": {
+            "command": "SEARCHAVAIL",
+            "segment": segment,
+            "body": {
+                "segment": segment,
+                "room_type": room_type,
+                "date": [date_str],
+                "final_price": 200,
+                "limit": 10
+            }
+        }
+    }
+    
+    for filename, content in queries.items():
+        with open(queries_dir / filename, "w") as f:
+            json.dump(content, f, indent=2)
+    
 def main():
     parser = argparse.ArgumentParser(description="Generate test data for Roomzin")
     parser.add_argument("--shards", type=int, default=2, help="Number of shards (default: 2)")
@@ -181,7 +257,8 @@ def main():
         total_props += props
         total_pkgs += pkgs
         print(f"  ✓ {shard_id}: {props} properties, {pkgs} packages")
-    
+        
+        
     print()
     print(f"✅ Data generated:")
     print(f"   Total properties: {total_props}")

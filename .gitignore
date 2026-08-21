@@ -6,3 +6,5 @@ test-data
 generated
 *.bin
 bin/*
+sample-queries/*
+sample-queries

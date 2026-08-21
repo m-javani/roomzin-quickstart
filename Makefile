@@ -124,6 +124,7 @@ stop:
 	@cd generated && docker compose kill && docker compose down -v --remove-orphans 2>/dev/null || true
 	@sudo rm -rf generated
 	@sudo rm -rf test-data
+	@sudo rm -rf sample-queries
 	@echo "$(GREEN)✅ Stopped and cleaned$(NC)"
 
 health:
