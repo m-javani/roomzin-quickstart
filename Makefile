@@ -1,4 +1,4 @@
-.PHONY: start stop logs health clean help
+.PHONY: download build start stop logs health clean help
 
 # Default values
 SHARDS ?= 2
@@ -125,7 +125,6 @@ stop:
 	@sudo rm -rf generated
 	@sudo rm -rf test-data
 	@echo "$(GREEN)✅ Stopped and cleaned$(NC)"
-"
 
 health:
 	@echo "$(BLUE)🔍 Detailed health check...$(NC)"

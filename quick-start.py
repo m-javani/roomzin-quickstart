@@ -295,10 +295,10 @@ ${depends}
           
           # Depends on bridges in this zone (use stored bridge_ids)
           bridge_ids = router.get("bridge_ids", [])
-          if bridge_ids:
-              depends = "\n".join([f"      - {b}" for b in bridge_ids])
-          else:
-              depends = "      - rzid"
+          depends_items = ["      - rzid", "        - rzpoint"]
+          for b in bridge_ids:
+              depends_items.append(f"        - {b}")
+          depends_str = "\n".join(depends_items)
           
           service = Template("""
   ${router_id}:
@@ -323,15 +323,13 @@ ${depends}
           --tcp-port 9000
           --hop-tcp-port 9000
       depends_on:
-        - rzid
-        - rzpoint
   ${depends}
   """).substitute(
               router_id=router["id"],
               zone_id=router["zone_id"],
               ip=ip,
               port=port,
-              depends=depends,
+              depends=depends_str,
           )
           services.append(service)
 
