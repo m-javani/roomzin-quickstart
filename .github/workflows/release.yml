@@ -41,7 +41,7 @@ jobs:
           cp gen_data.py ${PACKAGE_NAME}/
           cp rzpoint-echo.py ${PACKAGE_NAME}/
           cp build.sh ${PACKAGE_NAME}/
-          cp README.md ${PACKAGE_NAME}/
+          cp quick-start.txt ${PACKAGE_NAME}/
           
           # Create sample-queries directory
           mkdir -p ${PACKAGE_NAME}/sample-queries
