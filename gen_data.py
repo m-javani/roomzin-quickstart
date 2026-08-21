@@ -174,6 +174,7 @@ def generate_sample_queries(properties, packages, days, output_dir):
             "segment": segment,
             "body": {
                 "property_id": prop_id,
+                "segment": segment,
                 "area": prop["Area"],
                 "property_type": prop["PropertyType"],
                 "category": prop["Category"],
