@@ -17,16 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Download Roomzin binaries
-        run: |
-          mkdir -p bin
-          curl -L https://github.com/m-javani/roomzin/releases/latest/download/roomzin -o bin/roomzin
-          curl -L https://github.com/m-javani/rzbridge/releases/latest/download/rzbridge -o bin/rzbridge
-          curl -L https://github.com/m-javani/rzrouter/releases/latest/download/rzrouter -o bin/rzrouter
-          curl -L https://github.com/m-javani/rzid/releases/latest/download/rzid -o bin/rzid
-          curl -L https://github.com/m-javani/rzproxy/releases/latest/download/rzproxy -o bin/rzproxy
-          chmod +x bin/*
-
       - name: Prepare package
         run: |
           PACKAGE_NAME="roomzin-quickstart"
