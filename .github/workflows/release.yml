@@ -1,5 +1,4 @@
 name: Build Quickstart Package
-
 on:
   push:
     branches:
@@ -12,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -22,7 +20,6 @@ jobs:
           PACKAGE_NAME="roomzin-quickstart"
           mkdir -p ${PACKAGE_NAME}
           
-          # Copy files
           cp -r configs ${PACKAGE_NAME}/
           cp -r certs ${PACKAGE_NAME}/
           cp Makefile ${PACKAGE_NAME}/
@@ -33,10 +30,8 @@ jobs:
           cp download.sh ${PACKAGE_NAME}/
           cp quick-start.txt ${PACKAGE_NAME}/
           
-          # Create sample-queries directory
           mkdir -p ${PACKAGE_NAME}/sample-queries
           
-          # Create tarball
           tar -czf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}/
 
       - name: Upload to release
@@ -49,3 +44,4 @@ jobs:
           draft: false
           generate_release_notes: false
           overwrite_files: true
+          target_commitish: ${{ github.sha }}
