@@ -45,6 +45,5 @@ jobs:
           tag_name: latest
           name: quickstart
           files: roomzin-quickstart.tar.gz
-          prerelease: true
           draft: false
           generate_release_notes: false
