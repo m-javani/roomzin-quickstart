@@ -1,37 +1,26 @@
 # Roomzin Quickstart
 
 > **⚠️ IMPORTANT: Development & Testing Only**
-> 
-> This Docker Compose setup is intended **solely for local development, testing, and quick evaluation** of the Roomzin ecosystem.
-> 
-> For **production deployments**, Roomzin should be deployed on **bare metal or VMs** for:
-> - Maximum performance (no container overhead)
-> - Better network throughput
-> - Lower latency (no Docker networking layer)
-> - More predictable resource allocation
-> - Easier debugging and profiling
-> 
-> **Do not use this setup in production.**
+>
+> This setup is **for local development and testing only**. For production, deploy Roomzin on **bare metal or VMs** for maximum performance, lower latency, and better resource control.
 
 A complete Roomzin test environment with configurable components for local development and testing.
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Docker and Docker Compose installed
+- Docker and Docker Compose
 - Python 3.6+ (for data generation)
 - Make (optional, for convenience)
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/m-javani/roomzin-quickstart
 cd roomzin-quickstart
 
-# download all needed binaries
+# Download binaries and build Docker images
 make download
-
-# build local docker images
 make build
 
 # Start the full stack (2 shards, 2 zones, all components)
@@ -43,101 +32,115 @@ make health
 # View logs
 make logs
 
-# Stop and clean up everything
+# Stop and clean up
 make stop
 ```
 
-## Component Selection
+## 📊 Component Levels
 
-Control which components are started using `level`:
+Control which components are started using the `LEVEL` parameter:
 
-| Level | Components |
-|-------|------------|
+| Level | Components Included |
+|-------|---------------------|
 | `cluster` | Roomzin nodes + RzID + RzPoint |
-| `bridge` | cluster + Bridges |
-| `zone` | bridge + Zone Routers |
-| `edge` | zone + Edge Router |
-| `full` | edge + RZProxy |
+| `bridge` | Cluster + Bridges |
+| `zone` | Bridge + Zone Routers |
+| `edge` | Zone + Edge Router |
+| `full` | Edge + RZProxy |
+
+### Examples
 
 ```bash
-# if not done yet
-# download all needed binaries / build local docker images
-make download
-make build
-
-# Just cluster (default)
+# Just the cluster (default)
 make start
 
-# Cluster + Bridges (for bridge testing)
-make start level=bridge
+# Add bridges for bridge testing
+make start LEVEL=bridge
 
-# Cluster + Bridges + Zone Routers (for zone router testing)
-make start level=zone
+# Add zone routers
+make start LEVEL=zone
 
-# Cluster + Bridges + Zone Routers + Edge Router (for edge router testing)
-make start level=edge
-
-# Full stack without RZProxy
-make start level=full
+# Add edge router
+make start LEVEL=edge
 
 # Full stack with RZProxy
-make start level=full rzproxy=true
+make start LEVEL=full RZPROXY=true
 
-# Full stack with HA (2 bridges per shard, 2 zone routers per zone)
-make start level=full ha=true
-
-# Full stack with HA + RZProxy
-make start level=full ha=true rzproxy=true
+# Full stack with HA (2 bridges, 2 zone routers)
+make start LEVEL=full HA=true RZPROXY=true
 ```
 
-## Scaling
+## ⚙️ Configuration Options
+
+### Scaling
 
 ```bash
 # Custom number of shards and zones
-make start SHARDS=3 ZONES=3 level=full
+make start SHARDS=3 ZONES=3 LEVEL=full
 
 # Minimal cluster (1 shard, 1 zone)
 make start SHARDS=1 ZONES=1
 ```
 
-## HA Mode
+### High Availability (HA) Mode
 
-When `ha=true`:
+When `HA=true`:
 - 2 bridges per shard (instead of 1)
 - 2 zone routers per zone (instead of 1)
 - Edge router remains single instance
 
 ```bash
 # Bridge HA testing
-make start level=bridge ha=true SHARDS=1 ZONES=1
+make start LEVEL=bridge HA=true SHARDS=1 ZONES=1
 
 # Full stack HA
-make start level=full ha=true
+make start LEVEL=full HA=true
 ```
 
-## What Happens When You Run `make start`
+## 🎯 Testing Individual Components
+
+For component development, start only the required dependencies:
+
+### Test RzBridge
+```bash
+make start SHARDS=1 ZONES=1 LEVEL=bridge
+```
+Then run your local RzBridge connecting to `localhost:8081` (RzID) and `localhost:9090` (RzPoint).
+
+### Test RzRouter (Zone Router)
+```bash
+make start SHARDS=1 ZONES=1 LEVEL=zone
+```
+
+### Test RzRouter (Edge Router)
+```bash
+make start SHARDS=1 ZONES=1 LEVEL=edge
+```
+
+### Test RZProxy
+```bash
+make start SHARDS=1 ZONES=1 LEVEL=edge RZPROXY=false
+```
+Then run your local RZProxy.
+
+### Test HA Configurations
+```bash
+# 2 bridges per shard
+make start SHARDS=1 ZONES=1 LEVEL=bridge HA=true
+
+# 2 zone routers per zone
+make start SHARDS=1 ZONES=1 LEVEL=zone HA=true
+```
+
+## 🏗️ What Happens When You Run `make start`
 
 1. **Generate test data** - Creates CSV files with sample properties and packages
-2. **Build snapshots** - Uses Roomzin to build snapshots from the CSV data
+2. **Build snapshots** - Uses Roomzin to build snapshots from CSV data
 3. **Start containers** - Brings up all configured services
 
-Everything is automated. No manual steps required.
+Everything is automated - no manual steps required.
 
-## Make Commands
-
-| Command | Description |
-|---------|-------------|
-| `make download` | Download all binaries: roomzin, rzbridge, rzrouter, rzproxy, rzid |
-| `make build` | Builds local docker images from binaries|
-| `make start` | Generate data, build snapshots, and start the environment |
-| `make stop` | Stop everything and clean up all generated files |
-| `make health` | Check cluster health |
-| `make logs` | View all container logs |
-| `make logs-<service>` | View specific service logs |
-| `make clean` | Remove generated directory and test data |
-| `make help` | Show available commands |
-
-## Access Points
+## 🔌 Access Points
 
 | Component | Address | Port |
 |-----------|---------|------|
@@ -146,7 +149,7 @@ Everything is automated. No manual steps required.
 | RzPoint HTTP | `http://localhost` | 9090 |
 | Edge Router (TCP) | `localhost` | 9200 |
 
-**Roomzin Nodes (2 shards × 3 nodes):**
+### Roomzin Nodes (2 shards × 3 nodes)
 
 | Node | TCP Port | API Port |
 |------|----------|----------|
@@ -157,125 +160,30 @@ Everything is automated. No manual steps required.
 | roomzin-1-1 | 7811 | 8011 |
 | roomzin-1-2 | 7812 | 8012 |
 
-**HA Mode Ports (2 shards, 2 zones, ha=true):**
+### HA Mode Ports (2 shards, 2 zones, HA=true)
 
-| Bridge | Port |
-|--------|------|
-| bridge-0-0 | 9000 |
-| bridge-0-1 | 9001 |
-| bridge-1-0 | 9002 |
-| bridge-1-1 | 9003 |
+| Bridge | Port | Zone Router | Port |
+|--------|------|-------------|------|
+| bridge-0-0 | 9000 | router-zone-0-0 | 9100 |
+| bridge-0-1 | 9001 | router-zone-0-1 | 9101 |
+| bridge-1-0 | 9002 | router-zone-1-0 | 9102 |
+| bridge-1-1 | 9003 | router-zone-1-1 | 9103 |
 
-| Zone Router | Port |
-|-------------|------|
-| router-zone-0-0 | 9100 |
-| router-zone-0-1 | 9101 |
-| router-zone-1-0 | 9102 |
-| router-zone-1-1 | 9103 |
+## 🛠️ Make Commands
 
-## Testing
+| Command | Description |
+|---------|-------------|
+| `make download` | Download all binaries |
+| `make build` | Build local Docker images |
+| `make start` | Generate data, build snapshots, and start environment |
+| `make stop` | Stop everything and clean up generated files |
+| `make health` | Check cluster health |
+| `make logs` | View all container logs |
+| `make logs-<service>` | View specific service logs |
+| `make clean` | Remove generated directory and test data |
+| `make help` | Show available commands |
 
-### Health Check
-
-```bash
-make health
-```
-
-## Testing Individual Components
-
-For development of specific components, start only the required dependencies:
-
-### Testing RzBridge
-
-```bash
-make start SHARDS=1 ZONES=1 level=bridge
-```
-
-This starts:
-- 3 Roomzin nodes (1 shard)
-- RzID
-- RzPoint
-- Bridges
-
-Then run your local RzBridge binary connecting to:
-- RzID: `localhost:8081`
-- RzPoint: `localhost:9090`
-
-### Testing RzRouter (Zone Router)
-
-```bash
-make start SHARDS=1 ZONES=1 level=zone
-```
-
-This starts: cluster + Bridges + Zone Routers. Run your local Zone Router.
-
-### Testing RzRouter (Edge Router)
-
-```bash
-make start SHARDS=1 ZONES=1 level=edge
-```
-
-This starts: cluster + Bridges + Zone Routers + Edge Router. Run your local Edge Router.
-
-### Testing RZProxy
-
-```bash
-make start SHARDS=1 ZONES=1 level=edge rzproxy=false
-```
-
-This starts: full stack without RZProxy. Run your local RZProxy.
-
-### Testing HA
-
-```bash
-# Test with 2 bridges per shard
-make start SHARDS=1 ZONES=1 level=bridge ha=true
-
-# Test with 2 zone routers per zone
-make start SHARDS=1 ZONES=1 level=zone ha=true
-```
-
-## Usage Examples
-
-```bash
-# Just cluster
-make start SHARDS=1 ZONES=1 LEVEL=cluster
-
-# Cluster + Bridges
-make start SHARDS=1 ZONES=1 LEVEL=bridge
-
-# Cluster + Bridges + Zone Routers
-make start SHARDS=1 ZONES=1 LEVEL=zone
-
-# Cluster + Bridges + Zone Routers + Edge Router
-make start SHARDS=1 ZONES=1 LEVEL=edge
-
-# Full stack (includes RZProxy)
-make start SHARDS=1 ZONES=1 LEVEL=full RZPROXY=true
-
-# Full stack with HA
-make start SHARDS=1 ZONES=1 LEVEL=full HA=true RZPROXY=true
-```
-
-## Docker Images
-
-This quickstart builds local Docker images from downloaded binaries:
-
-- `roomzin:local` - Roomzin node (ports 7777, 8080)
-- `rzid:local` - Control plane (port 8080)
-- `rzbridge:local` - Bridge proxy (ports 9000, 9100)
-- `rzrouter:local` - Router (ports 9000, 9100)
-- `rzproxy:local` - HTTP/JSON proxy (port 8777)
-
-Images are built using Dockerfiles in the `bin/` directory:
-- `bin/Dockerfile.roomzin`
-- `bin/Dockerfile.rzid`
-- `bin/Dockerfile.rzbridge`
-- `bin/Dockerfile.rzrouter`
-- `bin/Dockerfile.rzproxy`
-
-
-## Directory Structure
+## 📁 Directory Structure
 
 ```
 roomzin-quickstart/
@@ -296,9 +204,25 @@ roomzin-quickstart/
 │   ├── Dockerfile.rzrouter
 │   ├── Dockerfile.rzid
 │   └── Dockerfile.rzproxy
+└── generated/               # Created by make start
+    ├── docker-compose.yml
+    ├── certs/
+    ├── configs/
+    ├── data/
+    └── rzpoint-echo.py
 ```
 
-## Troubleshooting
+## 🐳 Docker Images
+
+This quickstart builds local Docker images from downloaded binaries:
+
+- `roomzin:local` - Roomzin node (ports 7777, 8080)
+- `rzid:local` - Control plane (port 8080)
+- `rzbridge:local` - Bridge proxy (ports 9000, 9100)
+- `rzrouter:local` - Router (ports 9000, 9100)
+- `rzproxy:local` - HTTP/JSON proxy (port 8777)
+
+## 🔍 Troubleshooting
 
 ### Cluster fails to start
 
@@ -308,7 +232,7 @@ make logs
 make logs-roomzin-0-0
 ```
 
-## Clean Up
+### Clean everything
 
 ```bash
 # Stop everything and remove all generated files
@@ -318,15 +242,15 @@ make stop
 make clean
 ```
 
-## Notes
+## 📝 Notes
 
-1. **Certs** are pre-generated and shared across all nodes (hostname verification disabled for testing)
-2. **Data** is generated fresh on each `make start`
-3. **Snapshots** are built automatically from test data
-4. **All components** are stateless except Roomzin nodes (data persists until `make stop`)
-5. **RzPoint** resolves IDs to IPs for local development (returns IPs instead of hostnames)
+- **Certs** are pre-generated and shared across all nodes (hostname verification disabled for testing)
+- **Data** is generated fresh on each `make start`
+- **Snapshots** are built automatically from test data
+- **All components** are stateless except Roomzin nodes (data persists until `make stop`)
+- **RzPoint** resolves IDs to IPs for local development (returns IPs instead of hostnames)
 
-## Related Repositories
+## 🔗 Related Repositories
 
 - [Roomzin](https://github.com/m-javani/roomzin) - Main repository
 - [RzProxy](https://github.com/m-javani/rzproxy) - HTTP/JSON proxy

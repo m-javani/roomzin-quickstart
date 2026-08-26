@@ -3,9 +3,9 @@
 # Default values
 SHARDS ?= 2
 ZONES ?= 2
-LEVEL ?= cluster
+LEVEL ?= full
 HA ?= false
-RZPROXY ?= false
+RZPROXY ?= true
 
 # Convert boolean to flags
 HA_FLAG = $(if $(filter true,$(HA)),--ha,)
@@ -26,7 +26,8 @@ help:
 	@echo "  make start           - Generate data, build snapshots, and start the environment"
 	@echo "  make start SHARDS=3  - Start with 3 shards"
 	@echo "  make start ZONES=3   - Start with 3 zones"
-	@echo "  make start BRIDGE=0  - Start without RzBridge"
+	@echo "  make start LEVEL=cluster - Start with cluster level only"
+	@echo "  make start RZPROXY=false - Start without RZProxy"
 	@echo "  make stop            - Stop and clean up everything"
 	@echo "  make health          - Check cluster health"
 	@echo "  make logs            - View all logs"
@@ -35,10 +36,10 @@ help:
 	@echo "  make help            - Show this help"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make start"
-	@echo "  make start SHARDS=1 ZONES=1 BRIDGE=0 ZONE_ROUTER=0 EDGE_ROUTER=0 RZPROXY=0"
-	@echo "  make start BRIDGE=1 ZONE_ROUTER=0 EDGE_ROUTER=0 RZPROXY=0"
-	@echo "  make logs-roomzin-0-0"
+	@echo "  make start                    # Full deployment with RZProxy"
+	@echo "  make start SHARDS=1 ZONES=1  # Minimal full deployment"
+	@echo "  make start LEVEL=cluster      # Cluster only (no bridges/routers)"
+	@echo "  make start RZPROXY=false      # Full without RZProxy"
 
 download:
 	@echo "$(BLUE)📦 Downloading binaries...$(NC)"
@@ -157,7 +158,7 @@ health:
 	else \
 		echo "    $(RED)❌ RzPoint: not responding$(NC)"; \
 	fi
-	@if [ $(RZPROXY) -eq 1 ] && [ $(EDGE_ROUTER) -eq 1 ]; then \
+	@if [ $(RZPROXY) = "true" ] && [ $(LEVEL) = "full" ]; then \
 		if curl -s -o /dev/null -w "%{http_code}" http://localhost:8777/health 2>/dev/null | grep -q "200"; then \
 			echo "    $(GREEN)✅ RZProxy: running$(NC)"; \
 		else \

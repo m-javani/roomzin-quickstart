@@ -1,13 +1,14 @@
-Roomzin Quick-Start Guide
-=========================
+================================================================================
+                         ROOMZIN QUICK-START GUIDE
+================================================================================
 
-1. Start the Cluster
-   ------------------
-   start SHARDS=1 ZONES=1 LEVEL=full RZPROXY=true
+1. START THE CLUSTER
+   -----------------
+   make start SHARDS=1 ZONES=1 LEVEL=full RZPROXY=true
 
-   Wait ~15 seconds for all services to become healthy.
+   ⏱️ Wait ~15 seconds for all services to become healthy.
 
-2. Test It
+2. TEST IT
    --------
    # Set a property
    curl -X POST http://localhost:8777/api \
@@ -22,19 +23,20 @@ Roomzin Quick-Start Guide
    # Check cluster health
    make health
 
-3. Service Endpoints
+3. SERVICE ENDPOINTS
    ------------------
    RzProxy (HTTP):  http://localhost:8777
    RzID:            http://localhost:8081
    RzPoint:         http://localhost:9090
    Edge Router:     localhost:9200
 
-4. Makefile Commands
-   ------------------
+4. QUICK COMMANDS
+   ---------------
    make start     - Launch the cluster
    make stop      - Stop the cluster
+   make clean     - Clean up everything
 
-5. Sample Queries
+5. SAMPLE QUERIES
    ---------------
    All queries in sample-queries/ are pre-configured with property IDs
    and dates that match the generated test data.
@@ -44,10 +46,7 @@ Roomzin Quick-Start Guide
    - 02-setroompkg.json   Add room availability
    - 03-search.json       Search for inventory
 
-6. Clean Up
-   ---------
-   make clean
-
-7. Need Help?
+6. NEED HELP?
    -----------
    GitHub: https://github.com/m-javani/roomzin-quickstart
+   Docs:   https://m-javani.github.io/roomzin-doc/
