@@ -7,6 +7,6 @@ echo "📥 Downloading latest binaries..."
 make download
 
 echo "🏗️  Building Docker images..."
-make build-images
+make build
 
 echo "✅ Ready. cd roomzin-quickstart. Read the quick-start.txt. "
