@@ -1,0 +1,47 @@
+name: Build Quickstart Package
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and Upload Quickstart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Prepare package
+        run: |
+          PACKAGE_NAME="roomzin-quickstart"
+          mkdir -p ${PACKAGE_NAME}
+          
+          cp -r configs ${PACKAGE_NAME}/
+          cp -r certs ${PACKAGE_NAME}/
+          cp Makefile ${PACKAGE_NAME}/
+          cp quick-start.py ${PACKAGE_NAME}/
+          cp gen_data.py ${PACKAGE_NAME}/
+          cp rzpoint-echo.py ${PACKAGE_NAME}/
+          cp build.sh ${PACKAGE_NAME}/
+          cp download.sh ${PACKAGE_NAME}/
+          cp quick-start.txt ${PACKAGE_NAME}/
+          
+          mkdir -p ${PACKAGE_NAME}/sample-queries
+          
+          tar -czf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}/
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: quickstart
+          files: roomzin-quickstart.tar.gz
+          prerelease: false
+          draft: false
+          generate_release_notes: false
+          overwrite_files: true
+          target_commitish: ${{ github.sha }}
