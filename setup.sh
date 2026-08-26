@@ -9,4 +9,4 @@ make download
 echo "🏗️  Building Docker images..."
 make build
 
-echo "✅ Ready. cd roomzin-quickstart. Read the quick-start.txt. "
+echo "✅ Ready. cd roomzin-quickstart. Read the quick-start.txt."
