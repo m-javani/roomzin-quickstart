@@ -25,7 +25,6 @@ jobs:
           # Copy files
           cp -r configs ${PACKAGE_NAME}/
           cp -r certs ${PACKAGE_NAME}/
-          cp -r bin ${PACKAGE_NAME}/
           cp Makefile ${PACKAGE_NAME}/
           cp quick-start.py ${PACKAGE_NAME}/
           cp gen_data.py ${PACKAGE_NAME}/
